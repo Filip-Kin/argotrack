@@ -8,6 +8,15 @@ Deployed separately from the original beartime app: **argotrack.filipkin.com**
 (Coolify), off the `argotrack` branch. The `main` branch and
 `beartime.app.filipkin.com` are untouched.
 
+## Deploy (CI)
+
+Push to `argotrack` → GitHub Actions runs on the self-hosted **NAS runner**
+(`.github/workflows/deploy.yml`): builds the `Dockerfile`, pushes
+`git.filipkin.com/filip/argotrack` to the Forgejo registry, and triggers the
+Coolify docker-image app to pull. ~30s end-to-end; the cloud box only pulls.
+The Dockerfile installs `wget` (Coolify's image health check uses it) and the
+app normalizes any backslash-escaping depth in `API_KEY` (`/\\+n/g`).
+
 ## Endpoints
 
 | Route | Purpose |
