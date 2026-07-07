@@ -1,0 +1,43 @@
+name: Build on NAS and deploy argotrack
+
+on:
+  push:
+    branches: [argotrack]
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: [self-hosted, nas]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Forgejo registry
+        run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.filipkin.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+
+      - name: Build and push image
+        run: |
+          IMG=git.filipkin.com/filip/argotrack
+          docker build -t "$IMG:argotrack" -t "$IMG:${{ github.sha }}" .
+          docker push "$IMG:argotrack"
+          docker push "$IMG:${{ github.sha }}"
+
+      - name: Trigger Coolify deploy
+        id: deploy
+        run: |
+          RESP=$(curl -fsS -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            "https://panel.filipkin.com/api/v1/deploy?uuid=${{ secrets.COOLIFY_APP_UUID }}&force=true")
+          echo "$RESP"
+          echo "id=$(echo "$RESP" | python3 -c 'import sys,json;print(json.load(sys.stdin)["deployments"][0]["deployment_uuid"])')" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deploy to finish
+        run: |
+          for i in $(seq 1 40); do
+            S=$(curl -fsS -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+              "https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy.outputs.id }}" \
+              | python3 -c 'import sys,json;print(json.load(sys.stdin).get("status"))')
+            echo "deploy status: $S"
+            [ "$S" = "finished" ] && exit 0
+            [ "$S" = "failed" ] && exit 1
+            sleep 10
+          done
+          echo "timed out waiting for deploy"; exit 1
