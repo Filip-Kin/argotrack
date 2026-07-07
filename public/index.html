@@ -1,63 +1,440 @@
-<html>
-	<head>
-		<title>Beartime</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>Argonauts Attendance</title>
+	<link rel="icon" href="/favicon.ico" />
+	<style>
+		:root {
+			--bg: #0e1420;
+			--panel: #172033;
+			--panel-2: #1e293e;
+			--line: #2a3550;
+			--text: #e8edf7;
+			--muted: #93a1bf;
+			--accent: #f5a623;
+			--accent-2: #ffc656;
+			--in: #2ecc71;
+			--out: #4aa3ff;
+			--err: #ff5d5d;
+			--radius: 18px;
+			--shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+		}
 
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.0.3-alpha/dist/css/materialize.min.css" />
+		* { box-sizing: border-box; }
+		html, body { height: 100%; margin: 0; }
+		body {
+			background: radial-gradient(1200px 800px at 20% -10%, #1a2b44 0, transparent 60%), var(--bg);
+			background-color: var(--bg);
+			color: var(--text);
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			-webkit-font-smoothing: antialiased;
+			overflow: hidden;
+		}
 
-		<style>
-			.container {
-				position: absolute;
-				top: 40%;
-				left: 50%;
-				transform: translate(-50%, -50%);
-				max-width: 60vw;
-			}
-			.flex {
-				display: flex;
-				gap: 10px;
-				align-items: center;
-			}
-			.input-field {
-				width: 100%;
-			}
-			.title {
-				margin: 0 auto;
-				margin-bottom: 20px;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="container center">
-			<div class="title">
-				<h1>Beartime</h1>
-				<a href="/stats.html"><img src="/logo.png" height="128px" /></a>
-			</div>
-			<form class="row" action="login">
-				<div class="col s12 flex">
-					<div class="input-field">
-						<input type="text" name="pin" />
-						<label>Pin Number</label>
-					</div>
-					<button class="btn waves-effect waves-light" type="submit">Submit</button>
-				</div>
-			</form>
+		.page {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 360px;
+			gap: 28px;
+			height: 100vh;
+			padding: 28px;
+		}
+
+		.left-col {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+			min-width: 0;
+		}
+
+		.logo-bar {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			margin-bottom: 18px;
+		}
+		.logo-img { height: 84px; width: auto; }
+		.logo-text { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; margin-top: 8px; }
+		.logo-sub { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; }
+
+		.card {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+			padding: 26px 30px 30px;
+			width: 420px;
+			max-width: 92vw;
+			text-align: center;
+		}
+		.card h1 { font-size: 24px; margin: 4px 0 2px; }
+		.subtitle { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+		.divider { height: 1px; background: var(--line); margin: 4px 0 18px; }
+
+		.session-row { display: flex; gap: 10px; margin-bottom: 16px; }
+		#session-type, #event-name {
+			flex: 1;
+			background: var(--panel-2);
+			color: var(--text);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			padding: 12px 14px;
+			font-size: 15px;
+			outline: none;
+		}
+		#session-type { appearance: none; cursor: pointer; }
+		.event-name-wrap { flex: 1.4; }
+		.event-name-wrap.hidden { display: none; }
+
+		.pin-display {
+			height: 60px;
+			line-height: 60px;
+			border-radius: 12px;
+			background: var(--panel-2);
+			border: 2px solid var(--line);
+			font-size: 34px;
+			letter-spacing: 14px;
+			font-weight: 700;
+			margin-bottom: 18px;
+			transition: border-color 0.15s;
+		}
+		.pin-display.focused { border-color: var(--accent); }
+		.pin-display.has-input { color: var(--text); }
+
+		.keypad {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 12px;
+			margin-bottom: 18px;
+		}
+		.key {
+			background: var(--panel-2);
+			border: 1px solid var(--line);
+			color: var(--text);
+			font-size: 26px;
+			font-weight: 600;
+			padding: 18px 0;
+			border-radius: 14px;
+			cursor: pointer;
+			transition: transform 0.05s, background 0.12s;
+			user-select: none;
+		}
+		.key:hover { background: #26324e; }
+		.key:active { transform: scale(0.95); background: #2d3b5c; }
+		.key.del { color: var(--muted); font-size: 22px; }
+
+		.submit-btn {
+			width: 100%;
+			background: var(--accent);
+			color: #1a1206;
+			border: none;
+			border-radius: 14px;
+			padding: 16px;
+			font-size: 18px;
+			font-weight: 800;
+			cursor: pointer;
+			transition: background 0.12s, opacity 0.12s;
+		}
+		.submit-btn:hover:not(:disabled) { background: var(--accent-2); }
+		.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+		.spinner {
+			display: inline-block;
+			width: 16px; height: 16px;
+			border: 2px solid rgba(0,0,0,0.3);
+			border-top-color: #1a1206;
+			border-radius: 50%;
+			animation: spin 0.7s linear infinite;
+			vertical-align: -3px; margin-right: 8px;
+		}
+		@keyframes spin { to { transform: rotate(360deg); } }
+
+		/* result card */
+		.result-card { display: none; }
+		.result-card.in { border-color: var(--in); }
+		.result-card.out { border-color: var(--out); }
+		.result-card.error-card { border-color: var(--err); }
+		.result-name { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+		.result-name.in { color: var(--in); }
+		.result-name.out { color: var(--out); }
+		.result-name.error-text { color: var(--err); }
+		.result-msg { color: var(--muted); font-size: 16px; margin-bottom: 14px; }
+		.result-tag {
+			display: inline-block; background: var(--panel-2); border: 1px solid var(--line);
+			color: var(--accent-2); padding: 6px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+			margin: 2px 0 10px;
+		}
+		.result-duration { display: block; color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+		.back-btn {
+			background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+			padding: 12px 22px; border-radius: 12px; font-size: 15px; cursor: pointer;
+		}
+		.back-btn:hover { background: #26324e; }
+
+		.time-bar {
+			position: absolute; bottom: 18px; color: var(--muted); font-size: 14px; letter-spacing: 0.4px;
+		}
+
+		/* signed-in panel */
+		.right-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; overflow: hidden; }
+		.signed-in-panel {
+			background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+			padding: 18px 18px 20px; flex: 1; min-height: 0; display: flex; flex-direction: column;
+		}
+		.panel-label {
+			font-size: 12px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--muted);
+			margin-bottom: 14px; font-weight: 700;
+		}
+		.panel-names { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; overflow-y: auto; }
+		.signed-in-chip {
+			padding: 8px 14px; border-radius: 999px; font-size: 15px; font-weight: 600;
+			border: 1px solid var(--line);
+		}
+		.chip-mentor { background: rgba(245, 166, 35, 0.14); color: var(--accent-2); border-color: rgba(245,166,35,0.35); }
+		.chip-student { background: rgba(74, 163, 255, 0.12); color: #9cc7ff; border-color: rgba(74,163,255,0.3); }
+		.panel-empty { color: var(--muted); font-size: 14px; font-style: italic; }
+
+		@media (max-width: 900px) {
+			.page { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+			.right-col { flex-direction: row; }
+		}
+	</style>
+</head>
+<body>
+<div class="page">
+	<div class="left-col">
+		<div class="logo-bar">
+			<img class="logo-img" src="/logo.png" alt="Argonauts Logo" onerror="this.style.display='none'" />
+			<div class="logo-text">Argonauts Tracker</div>
+			<div class="logo-sub">Attendance</div>
 		</div>
 
-		<script src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.0.3-alpha/dist/js/materialize.min.js"></script>
-		<script>
-			M.AutoInit();
+		<div class="card" id="main-card">
+			<h1>Enter Your PIN</h1>
+			<p class="subtitle">Your ID to sign in or out</p>
+			<div class="divider"></div>
 
-			const form = document.querySelector("form");
-			form.addEventListener("submit", async (e) => {
-				e.preventDefault();
-				const input = form.querySelector('input[name="pin"]');
-				const pin = input.value;
-				const res = await fetch(`/login?pin=${encodeURIComponent(pin)}`).then((res) => res.json());
-				console.log(res);
+			<div class="session-row">
+				<select id="session-type" onchange="onSessionTypeChange()">
+					<option value="Meeting">Meeting</option>
+					<option value="Outreach">Outreach</option>
+					<option value="Competition">Competition</option>
+				</select>
+				<div class="event-name-wrap hidden" id="event-name-wrap">
+					<input type="text" id="event-name" placeholder="What event?" maxlength="60" />
+				</div>
+			</div>
 
-				M.toast({ text: res.msg });
-				input.value = "";
-			});
-		</script>
-	</body>
+			<div class="pin-display focused" id="pin-display">&#8203;</div>
+
+			<div class="keypad">
+				<button class="key" onclick="pressKey('1')">1</button>
+				<button class="key" onclick="pressKey('2')">2</button>
+				<button class="key" onclick="pressKey('3')">3</button>
+				<button class="key" onclick="pressKey('4')">4</button>
+				<button class="key" onclick="pressKey('5')">5</button>
+				<button class="key" onclick="pressKey('6')">6</button>
+				<button class="key" onclick="pressKey('7')">7</button>
+				<button class="key" onclick="pressKey('8')">8</button>
+				<button class="key" onclick="pressKey('9')">9</button>
+				<button class="key del" onclick="deleteLast()">&#9003;</button>
+				<button class="key" onclick="pressKey('0')">0</button>
+				<button class="key del" onclick="clearPin()">C</button>
+			</div>
+
+			<button class="submit-btn" id="submit-btn" onclick="submitPin()" disabled>Check In / Out</button>
+		</div>
+
+		<div class="card result-card" id="result-card">
+			<div class="result-name" id="result-name"></div>
+			<div class="result-msg" id="result-msg"></div>
+			<div class="result-tag" id="result-tag" style="display:none"></div>
+			<div class="result-duration" id="result-duration" style="display:none"></div>
+			<button class="back-btn" onclick="resetKiosk()">&larr; Back</button>
+		</div>
+
+		<div class="time-bar" id="time-bar"></div>
+	</div>
+
+	<div class="right-col" id="right-col">
+		<div class="signed-in-panel" id="mentor-panel">
+			<div class="panel-label">Mentors</div>
+			<div class="panel-names" id="mentor-names"></div>
+		</div>
+		<div class="signed-in-panel" id="student-panel">
+			<div class="panel-label">Students</div>
+			<div class="panel-names" id="student-names"></div>
+		</div>
+	</div>
+</div>
+
+<script>
+	var pin = '';
+	var MAX_PIN = 6;
+
+	function updateClock() {
+		var now = new Date();
+		document.getElementById('time-bar').textContent =
+			now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) +
+			'  •  ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+	}
+	updateClock();
+	setInterval(updateClock, 15000);
+
+	// GET helper against the beartime backend.
+	function api(path, params) {
+		var qs = params
+			? '?' + Object.keys(params).map(function (k) {
+				return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+			}).join('&')
+			: '';
+		return fetch(path + qs).then(function (r) { return r.json(); });
+	}
+
+	function refreshSignedIn() {
+		api('/signedin')
+			.then(function (data) {
+				if (!data.success) return;
+				renderChips('mentor', data.mentors || []);
+				renderChips('student', data.students || []);
+			})
+			.catch(function () {});
+	}
+
+	function renderChips(kind, names) {
+		var el = document.getElementById(kind + '-names');
+		if (!names.length) {
+			el.innerHTML = '<div class="panel-empty">None signed in</div>';
+			return;
+		}
+		el.innerHTML = names.map(function (n) {
+			return '<div class="signed-in-chip chip-' + kind + '">' + escapeHtml(n) + '</div>';
+		}).join('');
+	}
+
+	function escapeHtml(s) {
+		return String(s).replace(/[&<>"']/g, function (c) {
+			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+		});
+	}
+
+	refreshSignedIn();
+	setInterval(refreshSignedIn, 30000);
+
+	function onSessionTypeChange() {
+		var val = document.getElementById('session-type').value;
+		var wrap = document.getElementById('event-name-wrap');
+		if (val === 'Outreach' || val === 'Competition') {
+			wrap.classList.remove('hidden');
+			document.getElementById('event-name').focus();
+		} else {
+			wrap.classList.add('hidden');
+			document.getElementById('event-name').value = '';
+		}
+	}
+
+	function pressKey(k) { if (pin.length >= MAX_PIN) return; pin += k; updateDisplay(); }
+	function deleteLast() { pin = pin.slice(0, -1); updateDisplay(); }
+	function clearPin() { pin = ''; updateDisplay(); }
+
+	function updateDisplay() {
+		var disp = document.getElementById('pin-display');
+		disp.className = 'pin-display focused' + (pin.length > 0 ? ' has-input' : '');
+		disp.textContent = pin.length > 0 ? pin.replace(/./g, '•') : '​';
+		document.getElementById('submit-btn').disabled = pin.length < 3;
+	}
+
+	function submitPin() {
+		if (pin.length < 3) return;
+		var sessionType = document.getElementById('session-type').value;
+		var eventName = document.getElementById('event-name').value.trim();
+		var btn = document.getElementById('submit-btn');
+		btn.disabled = true;
+		btn.innerHTML = '<span class="spinner"></span>Checking...';
+		api('/punch', { pin: pin, sessionType: sessionType, eventName: eventName })
+			.then(function (data) { showResult(data); })
+			.catch(function () { showResult({ success: false, message: 'Connection error. Try again.' }); });
+	}
+
+	function showResult(data) {
+		document.getElementById('main-card').style.display = 'none';
+		var rc = document.getElementById('result-card'),
+			rn = document.getElementById('result-name'),
+			rm = document.getElementById('result-msg'),
+			rd = document.getElementById('result-duration'),
+			rt = document.getElementById('result-tag');
+		rc.style.display = 'block';
+		rd.style.display = 'none';
+		rt.style.display = 'none';
+		document.getElementById('pin-display').classList.remove('focused');
+
+		if (!data.success) {
+			rc.className = 'card result-card error-card';
+			rn.className = 'result-name error-text';
+			rn.textContent = 'PIN Not Found';
+			rm.textContent = data.message || 'Please check your PIN and try again.';
+		} else if (data.event === 'IN') {
+			rc.className = 'card result-card in';
+			rn.className = 'result-name in';
+			rn.textContent = 'Welcome, ' + data.name + '!';
+			rm.textContent = data.message;
+			if (data.sessionType) {
+				rt.style.display = 'inline-block';
+				rt.textContent = data.sessionType + (data.eventName ? ' — ' + data.eventName : '');
+			}
+		} else if (data.event === 'OUT') {
+			rc.className = 'card result-card out';
+			rn.className = 'result-name out';
+			rn.textContent = 'See you, ' + data.name + '!';
+			rm.textContent = data.message;
+			if (data.sessionType) {
+				rt.style.display = 'inline-block';
+				rt.textContent = data.sessionType + (data.eventName ? ' — ' + data.eventName : '');
+			}
+			if (typeof data.duration === 'number') {
+				rd.style.display = 'block';
+				rd.textContent = 'Session: ' + formatDuration(data.duration);
+			}
+		}
+
+		refreshSignedIn();
+		setTimeout(resetKiosk, 5000);
+	}
+
+	function resetKiosk() {
+		pin = '';
+		var disp = document.getElementById('pin-display');
+		disp.className = 'pin-display focused';
+		disp.textContent = '​';
+		document.getElementById('submit-btn').disabled = true;
+		document.getElementById('submit-btn').textContent = 'Check In / Out';
+		document.getElementById('main-card').style.display = 'block';
+		document.getElementById('result-card').style.display = 'none';
+		document.getElementById('session-type').value = 'Meeting';
+		document.getElementById('event-name').value = '';
+		document.getElementById('event-name-wrap').classList.add('hidden');
+	}
+
+	function formatDuration(hours) {
+		var totalMin = Math.round(hours * 60);
+		var h = Math.floor(totalMin / 60);
+		var m = totalMin % 60;
+		if (h === 0) return m + ' min';
+		if (m === 0) return h + 'h';
+		return h + 'h ' + m + 'm';
+	}
+
+	document.addEventListener('keydown', function (e) {
+		var inEventField = document.activeElement === document.getElementById('event-name');
+		if (inEventField) { if (e.key === 'Enter') submitPin(); return; }
+		if (e.key >= '0' && e.key <= '9') { e.preventDefault(); pressKey(e.key); }
+		else if (e.key === 'Backspace') { e.preventDefault(); deleteLast(); }
+		else if (e.key === 'Escape') { e.preventDefault(); clearPin(); }
+		else if (e.key === 'Enter') { e.preventDefault(); submitPin(); }
+	});
+</script>
+</body>
 </html>
