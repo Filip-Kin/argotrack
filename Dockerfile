@@ -11,8 +11,8 @@ RUN npm run build   # tsc -> dist/
 
 FROM node:22-slim
 WORKDIR /app
-# curl: Coolify's health check execs it inside the container.
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+# curl + wget: Coolify's health check execs one of them inside the container.
+RUN apt-get update && apt-get install -y --no-install-recommends curl wget \
     && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
