@@ -51,12 +51,23 @@ type UsersRowData = {
 async function doConnect(): Promise<boolean> {
     await doc.loadInfo();
 
-    usersSheet = doc.sheetsByIndex[0];
-    logSheet = doc.sheetsByIndex[1];
-    sessionsSheet = doc.sheetsByIndex[2];
-    if (!usersSheet || !logSheet || !sessionsSheet) {
-        throw new Error('Required sheets not found (need Users, Log, Sessions tabs)');
+    // Self-provision: attaching a brand-new sheet (only "Sheet1") just works.
+    // Reuse the first existing tab as Users; create Log/Sessions if missing.
+    usersSheet = doc.sheetsByTitle['Users'];
+    if (!usersSheet) {
+        usersSheet = doc.sheetsByIndex[0];
+        if (!usersSheet) throw new Error('Spreadsheet has no sheets');
+        await usersSheet.updateProperties({ title: 'Users' });
     }
+    logSheet = doc.sheetsByTitle['Log']
+        || (await doc.addSheet({ title: 'Log', headerValues: ['pin', 'fname', 'lname'] }));
+    sessionsSheet = doc.sheetsByTitle['Sessions']
+        || (await doc.addSheet({ title: 'Sessions', headerValues: SESSIONS_HEADERS }));
+
+    // Keep tab order Users(0), Log(1), Sessions(2) — ops read/write by index.
+    await usersSheet.updateProperties({ index: 0 });
+    await logSheet.updateProperties({ index: 1 });
+    await sessionsSheet.updateProperties({ index: 2 });
 
     // Ensure header rows exist / are correct. Cheap and idempotent.
     await usersSheet.setHeaderRow(USERS_HEADERS);
@@ -69,6 +80,11 @@ async function doConnect(): Promise<boolean> {
 
     // Make sure every roster pin has a Log row (so per-day hours have a home).
     await ensureLogRows();
+
+    // Lock the Log identity columns / header so they can't drift from Users.
+    await ensureProtections().catch((e) =>
+        console.error('[protections] could not apply (non-fatal):', e?.message || e)
+    );
 
     return true;
 }
@@ -93,12 +109,30 @@ function invalidateConnection() {
     connectPromise = undefined;
 }
 
-/** Run a sheet operation; on failure, drop the connection and retry once. */
+/**
+ * Ensure we're connected, reconnecting once if the cached connection is stale.
+ * Retries only the CONNECT, never the caller's operation — safe for mutations.
+ */
+async function ensureConnected(): Promise<void> {
+    try {
+        await connect();
+    } catch {
+        invalidateConnection();
+        await connect();
+    }
+}
+
+/**
+ * Run a READ-ONLY sheet operation; on failure, drop the connection and retry
+ * once. Never use this for mutations — retrying a half-applied write (e.g. a
+ * sign-out that already flipped `loggedin`) would double-apply it.
+ */
 async function withReconnect<T>(fn: () => Promise<T>): Promise<T> {
     try {
         await connect();
         return await fn();
-    } catch (e) {
+    } catch (e: any) {
+        console.error('[withReconnect] first attempt failed, reconnecting:', e?.message || e);
         invalidateConnection();
         await connect();
         return await fn();
@@ -108,24 +142,103 @@ async function withReconnect<T>(fn: () => Promise<T>): Promise<T> {
 // ─────────────────────────────────────────────────────────────
 // Roster / Log helpers
 // ─────────────────────────────────────────────────────────────
+/**
+ * Keep the (protected, machine-owned) Log sheet's identity columns in sync with
+ * the Users roster: add a Log row for any new pin, and propagate name changes.
+ * Users is the single source of truth humans edit; Log is never edited by hand.
+ */
 async function ensureLogRows() {
     const userRows = await usersSheet!.getRows<UsersRowData>();
     const logRows = await logSheet!.getRows();
 
-    const logPins = new Set<string>();
+    const logByPin = new Map<string, (typeof logRows)[number]>();
     for (const r of logRows) {
         const pin = r.get('pin') ?? r['_rawData']?.[0];
-        if (pin) logPins.add(String(pin));
+        if (pin) logByPin.set(String(pin), r);
     }
 
     const toAdd: string[][] = [];
     for (const u of userRows) {
         const pin = u.get('pin');
-        if (pin && !logPins.has(String(pin))) {
+        if (!pin) continue;
+        const existing = logByPin.get(String(pin));
+        if (!existing) {
             toAdd.push([pin, u.get('fname'), u.get('lname')]);
+        } else {
+            // Propagate name edits from the roster.
+            const fname = u.get('fname') ?? '';
+            const lname = u.get('lname') ?? '';
+            if (existing.get('fname') !== fname || existing.get('lname') !== lname) {
+                existing.set('fname', fname);
+                existing.set('lname', lname);
+                await existing.save();
+            }
         }
     }
     if (toAdd.length) await logSheet!.addRows(toAdd);
+}
+
+/**
+ * Lock the parts of the Log sheet that cause the "two pin columns drift apart"
+ * breakage, while leaving the day cells open so mentors can mark attendance.
+ *
+ *  - Identity columns A:C (pin, fname, lname) → service-account only. These are
+ *    maintained by the backend from the Users roster; humans never edit them.
+ *  - Header row (the date labels) → service-account only, so date columns can't
+ *    be renamed/reordered.
+ *  - Everything else (the day cells, D2 onward) stays editable so mentors can set
+ *    "E" for excused absences and the backend can write hours.
+ *
+ * Idempotent — each range is tagged by description.
+ */
+async function ensureProtections() {
+    const ID = process.env.SPREADSHEET_ID;
+    const editor = process.env.CLIENT_EMAIL;
+    if (!ID || !editor || !logSheet) return;
+    const sheetId = logSheet.sheetId;
+
+    const ranges: { tag: string; range: any }[] = [
+        {
+            tag: 'argotrack:log-identity',
+            range: { sheetId, startColumnIndex: 0, endColumnIndex: 3 }, // A:C, all rows
+        },
+        {
+            tag: 'argotrack:log-header',
+            range: { sheetId, startRowIndex: 0, endRowIndex: 1 }, // row 1, all columns
+        },
+    ];
+
+    const info: any = await serviceAccountAuth.request({
+        url: `https://sheets.googleapis.com/v4/spreadsheets/${ID}` +
+            `?fields=sheets(properties(sheetId),protectedRanges(description))`,
+    });
+    const logInfo = (info.data.sheets || []).find(
+        (s: any) => s.properties.sheetId === sheetId
+    );
+    const present = new Set(
+        (logInfo?.protectedRanges || []).map((p: any) => p.description)
+    );
+
+    const requests = ranges
+        .filter((r) => !present.has(r.tag))
+        .map((r) => ({
+            addProtectedRange: {
+                protectedRange: {
+                    range: r.range,
+                    description: r.tag,
+                    warningOnly: false,
+                    editors: { users: [editor] },
+                },
+            },
+        }));
+
+    if (requests.length) {
+        await serviceAccountAuth.request({
+            url: `https://sheets.googleapis.com/v4/spreadsheets/${ID}:batchUpdate`,
+            method: 'POST',
+            data: { requests },
+        });
+    }
 }
 
 /** Column index of today's date in the Log sheet, creating it if needed. */
@@ -154,7 +267,14 @@ async function getDateColumn(): Promise<number> {
     return newCol;
 }
 
-async function addHoursForDay(pin: string, hours: number) {
+async function addHoursForDay(pin: string, hours: number, fname = '', lname = '') {
+    // Make sure this pin has a Log row (a member added after startup won't yet).
+    const logRows = await logSheet!.getRows();
+    const hasRow = logRows.some(
+        (r) => String(r.get('pin') ?? r['_rawData']?.[0]) === String(pin)
+    );
+    if (!hasRow) await logSheet!.addRow({ pin, fname, lname });
+
     const col = await getDateColumn();
     await logSheet!.loadCells();
 
@@ -198,7 +318,11 @@ export type PunchResult =
 
 /** Toggle a user in/out. Records a raw Sessions row and, on OUT, per-day hours. */
 export async function punch(pin: string, sessionType?: string, eventName?: string): Promise<PunchResult> {
-    return withReconnect(async () => {
+    // Connection may reconnect once, but the toggle itself runs exactly once —
+    // retrying a mutation would double-flip loggedin.
+    await ensureConnected();
+
+    {
         const rows = await usersSheet!.getRows<UsersRowData>();
         const user = rows.find((r) => String(r.get('pin')) === String(pin));
         if (!user) return { success: false, message: 'PIN not found' };
@@ -250,7 +374,7 @@ export async function punch(pin: string, sessionType?: string, eventName?: strin
             user.set('loggedin', 'FALSE');
             await user.save();
 
-            await addHoursForDay(pin, hours);
+            await addHoursForDay(pin, hours, user.get('fname'), user.get('lname'));
 
             await sessionsSheet!.addRow({
                 timestamp: now.toISOString(),
@@ -274,7 +398,7 @@ export async function punch(pin: string, sessionType?: string, eventName?: strin
                 total,
             };
         }
-    });
+    }
 }
 
 /** Names currently signed in, split into mentors and students. */
