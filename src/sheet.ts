@@ -8,8 +8,10 @@ import { getNow, localDateString } from './util';
 // ─────────────────────────────────────────────────────────────
 const serviceAccountAuth = new JWT({
     email: process.env.CLIENT_EMAIL,
-    // Coolify/env may store the PEM with \n or \\n escapes; normalize to real newlines.
-    key: (process.env.API_KEY || '').replace(/\\{1,2}n/g, '\n'),
+    // Coolify/env may store the PEM with any depth of escaped newlines (\n, \\n,
+    // even \\\\n after a copy through the API); collapse any run of backslashes
+    // before an n into a real newline.
+    key: (process.env.API_KEY || '').replace(/\\+n/g, '\n'),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
