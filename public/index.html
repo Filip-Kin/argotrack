@@ -5,6 +5,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<title>Argonauts Attendance</title>
 	<link rel="icon" href="/favicon.ico" />
+	<link rel="icon" type="image/png" sizes="512x512" href="/logo.png" />
+	<link rel="apple-touch-icon" href="/logo.png" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -14,7 +16,7 @@
 		.page { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2vw; width: 100vw; height: 100vh; padding: 2vh 3vw; }
 		.left-col { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; height: 100%; }
 		.right-col { display: flex; flex-direction: column; align-items: stretch; width: clamp(140px, 18vw, 240px); flex-shrink: 0; align-self: center; gap: 10px; }
-		.logo-bar { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; margin-bottom: 1.5vh; }
+		.logo-bar { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; margin-bottom: 1.5vh; cursor: pointer; }
 		.logo-img { width: clamp(48px, 7vh, 80px); height: clamp(48px, 7vh, 80px); object-fit: contain; background: #000; border-radius: 50%; padding: 5px; }
 		.logo-text { font-size: clamp(13px, 2vh, 20px); font-weight: 700; color: #000; letter-spacing: 2px; text-transform: uppercase; }
 		.logo-sub { font-size: clamp(8px, 1.2vh, 11px); color: #3a2800; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
@@ -23,6 +25,7 @@
 		.subtitle { font-size: clamp(9px, 1.3vh, 12px); color: #3a2800; margin-bottom: 1vh; }
 		.divider { height: 1px; background: linear-gradient(to right, transparent, rgba(0,0,0,0.25), transparent); margin: 0.8vh 0; }
 		.session-row { display: flex; gap: 6px; margin-bottom: 1vh; }
+		.session-row.hidden { display: none; }
 		select { flex: 1; padding: clamp(5px, 0.9vh, 9px) 10px; background: rgba(0,0,0,0.12); border: 1.5px solid rgba(0,0,0,0.25); border-radius: 7px; color: #000; font-size: clamp(10px, 1.3vh, 13px); font-family: 'Montserrat', sans-serif; font-weight: 600; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
 		select:focus { border-color: #000; }
 		select option { background: #b8860b; color: #000; }
@@ -31,9 +34,12 @@
 		.event-name-wrap input:focus { border-color: #000; }
 		.event-name-wrap input::placeholder { color: rgba(0,0,0,0.3); }
 		.event-name-wrap.hidden { opacity: 0; pointer-events: none; }
-		.pin-display { background: rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.25); border-radius: 9px; padding: clamp(8px, 1.4vh, 14px); font-size: clamp(22px, 5vh, 44px); font-weight: 700; letter-spacing: clamp(8px, 1.8vw, 18px); color: #000; margin-bottom: 1vh; min-height: clamp(50px, 8vh, 76px); display: flex; align-items: center; justify-content: center; transition: border-color 0.2s, box-shadow 0.2s; }
+		.pin-display { position: relative; background: rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.25); border-radius: 9px; padding: clamp(8px, 1.4vh, 14px); font-size: clamp(22px, 5vh, 44px); font-weight: 700; color: #000; margin-bottom: 1vh; min-height: clamp(50px, 8vh, 76px); display: flex; align-items: center; justify-content: center; transition: border-color 0.2s, box-shadow 0.2s; }
 		.pin-display.has-input { border-color: #000; box-shadow: 0 0 12px rgba(0,0,0,0.15); }
-		.pin-display.focused::after { content: '|'; display: inline-block; color: #000; font-weight: 300; margin-left: 2px; animation: blink 1s step-end infinite; }
+		/* letter-spacing with a matching negative right margin centers the digits
+		   (cancels the trailing gap that otherwise shifts them left) */
+		#pin-digits { position: relative; letter-spacing: clamp(8px, 1.8vw, 18px); margin-right: calc(clamp(8px, 1.8vw, 18px) * -1); }
+		.pin-display.focused #pin-digits::after { content: '|'; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); color: #000; font-weight: 300; animation: blink 1s step-end infinite; }
 		@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 		.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(4px, 0.8vh, 8px); margin-bottom: 1vh; }
 		.key { background: rgba(0,0,0,0.10); border: 1.5px solid rgba(0,0,0,0.18); border-radius: clamp(6px, 1vh, 10px); padding: clamp(8px, 1.6vh, 16px) 0; font-size: clamp(15px, 3vh, 26px); font-weight: 700; color: #000; cursor: pointer; user-select: none; font-family: 'Montserrat', sans-serif; transition: background 0.1s, transform 0.08s; }
@@ -46,16 +52,20 @@
 		.submit-btn:hover { opacity: 0.85; }
 		.submit-btn:active { transform: scale(0.98); }
 		.submit-btn:disabled { background: rgba(0,0,0,0.18); color: rgba(0,0,0,0.3); cursor: not-allowed; }
-		.result-card { display: none; border-radius: 12px; padding: clamp(16px, 2.5vh, 26px); text-align: center; }
+		.login-back { margin-top: 0.8vh; }
+		.login-back.hidden { display: none; }
+		.login-back a { font-size: clamp(9px, 1.2vh, 12px); color: rgba(0,0,0,0.55); cursor: pointer; text-decoration: none; letter-spacing: 0.5px; }
+		.login-back a:hover { color: #000; text-decoration: underline; }
+		.result-card { display: none; flex-direction: column; align-items: center; gap: 6px; border-radius: 12px; padding: clamp(16px, 2.5vh, 26px); text-align: center; }
 		.result-card.in, .result-card.out, .result-card.signout_all { background: rgba(0,0,0,0.10); border: 1.5px solid rgba(0,0,0,0.2); }
 		.result-card.error-card { background: rgba(90,0,0,0.12); border: 1.5px solid rgba(90,0,0,0.3); }
-		.result-name { font-size: clamp(16px, 3.5vh, 26px); font-weight: 700; margin-bottom: 5px; }
+		.result-name { font-size: clamp(16px, 3.5vh, 26px); font-weight: 700; }
 		.result-name.in, .result-name.out, .result-name.signout_all { color: #000; }
 		.result-name.error-text { color: #5a0000; }
-		.result-msg { font-size: clamp(10px, 1.5vh, 13px); color: #3a2800; margin-bottom: 8px; }
-		.result-tag { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: clamp(9px, 1.2vh, 11px); font-weight: 700; margin-bottom: 10px; letter-spacing: 1px; text-transform: uppercase; background: rgba(0,0,0,0.10); color: #000; border: 1px solid rgba(0,0,0,0.18); }
-		.result-duration { display: inline-block; background: rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.15); border-radius: 5px; padding: 4px 10px; font-size: clamp(9px, 1.3vh, 12px); color: #3a2800; margin-bottom: 10px; }
-		.back-btn { background: transparent; border: 1.5px solid rgba(0,0,0,0.2); border-radius: 7px; padding: 7px 18px; color: rgba(0,0,0,0.5); font-size: clamp(10px, 1.3vh, 12px); cursor: pointer; font-family: 'Montserrat', sans-serif; transition: border-color 0.15s, color 0.15s; }
+		.result-msg { font-size: clamp(10px, 1.5vh, 13px); color: #3a2800; }
+		.result-tag { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: clamp(9px, 1.2vh, 11px); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: rgba(0,0,0,0.10); color: #000; border: 1px solid rgba(0,0,0,0.18); }
+		.result-duration { display: inline-block; background: rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.15); border-radius: 5px; padding: 4px 10px; font-size: clamp(9px, 1.3vh, 12px); color: #3a2800; }
+		.back-btn { margin-top: 4px; background: transparent; border: 1.5px solid rgba(0,0,0,0.2); border-radius: 7px; padding: 7px 18px; color: rgba(0,0,0,0.5); font-size: clamp(10px, 1.3vh, 12px); cursor: pointer; font-family: 'Montserrat', sans-serif; transition: border-color 0.15s, color 0.15s; }
 		.back-btn:hover { border-color: #000; color: #000; }
 		.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
 		@keyframes spin { to { transform: rotate(360deg); } }
@@ -80,18 +90,18 @@
 <body>
 <div class="page">
 	<div class="left-col">
-		<div class="logo-bar">
+		<div class="logo-bar" onclick="enterLoginMode()" title="Mentor login">
 			<img class="logo-img" src="/logo.png" alt="Argonauts Logo" onerror="this.style.display='none'" />
 			<div class="logo-text">Argonauts Tracker</div>
 			<div class="logo-sub">Attendance</div>
 		</div>
 
 		<div class="card" id="main-card">
-			<h1>Enter Your PIN</h1>
-			<p class="subtitle">Student ID to sign in or out</p>
+			<h1 id="card-title">Enter Your PIN</h1>
+			<p class="subtitle" id="card-subtitle">Student ID to sign in or out</p>
 			<div class="divider"></div>
 
-			<div class="session-row">
+			<div class="session-row" id="session-row">
 				<select id="session-type" onchange="onSessionTypeChange()">
 					<option value="Meeting">Meeting</option>
 					<option value="Outreach">Outreach</option>
@@ -102,7 +112,7 @@
 				</div>
 			</div>
 
-			<div class="pin-display focused" id="pin-display">&#8203;</div>
+			<div class="pin-display focused" id="pin-display"><span id="pin-digits">&#8203;</span></div>
 
 			<div class="keypad">
 				<button class="key" onclick="pressKey('1')">1</button>
@@ -120,6 +130,7 @@
 			</div>
 
 			<button class="submit-btn" id="submit-btn" onclick="submitPin()" disabled>Check In / Out</button>
+			<div class="login-back hidden" id="login-back"><a onclick="exitLoginMode()">&larr; Back to sign-in</a></div>
 		</div>
 
 		<div class="card result-card" id="result-card">
@@ -146,8 +157,12 @@
 </div>
 
 <script>
+	// Returning to the login screen (this page) expires any mentor stats session.
+	sessionStorage.removeItem('stats_pin');
+
 	var pin = '';
 	var MAX_PIN = 6;
+	var mode = 'kiosk'; // 'kiosk' | 'login'
 
 	function updateClock() {
 		var now = new Date();
@@ -197,6 +212,18 @@
 	refreshSignedIn();
 	setInterval(refreshSignedIn, 30000);
 
+	// ── mode switching (kiosk sign-in  <->  mentor login) ──
+	function applyMode() {
+		var login = mode === 'login';
+		document.getElementById('card-title').textContent = login ? 'Mentor Login' : 'Enter Your PIN';
+		document.getElementById('card-subtitle').textContent = login ? 'Enter mentor PIN to view stats' : 'Student ID to sign in or out';
+		document.getElementById('session-row').classList.toggle('hidden', login);
+		document.getElementById('submit-btn').textContent = login ? 'Log In' : 'Check In / Out';
+		document.getElementById('login-back').classList.toggle('hidden', !login);
+	}
+	function enterLoginMode() { mode = 'login'; resetKiosk(); }
+	function exitLoginMode() { mode = 'kiosk'; resetKiosk(); }
+
 	function onSessionTypeChange() {
 		var val = document.getElementById('session-type').value;
 		var wrap = document.getElementById('event-name-wrap');
@@ -216,12 +243,13 @@
 	function updateDisplay() {
 		var disp = document.getElementById('pin-display');
 		disp.className = 'pin-display focused' + (pin.length > 0 ? ' has-input' : '');
-		disp.textContent = pin.length > 0 ? pin : '​';
+		document.getElementById('pin-digits').textContent = pin.length > 0 ? pin : '​';
 		document.getElementById('submit-btn').disabled = pin.length < 3;
 	}
 
 	function submitPin() {
 		if (pin.length < 3) return;
+		if (mode === 'login') return mentorLogin();
 		var sessionType = document.getElementById('session-type').value;
 		var eventName = document.getElementById('event-name').value.trim();
 		var btn = document.getElementById('submit-btn');
@@ -232,6 +260,23 @@
 			.catch(function () { showResult({ success: false, message: 'Connection error. Try again.' }); });
 	}
 
+	function mentorLogin() {
+		var enteredPin = pin;
+		var btn = document.getElementById('submit-btn');
+		btn.disabled = true;
+		btn.innerHTML = '<span class="spinner"></span>Checking...';
+		fetch('/stats?pin=' + encodeURIComponent(enteredPin)).then(function (r) {
+			if (r.ok) {
+				sessionStorage.setItem('stats_pin', enteredPin);
+				window.location.href = '/stats.html';
+			} else {
+				showResult({ success: false, message: 'Not a mentor PIN.' });
+			}
+		}).catch(function () {
+			showResult({ success: false, message: 'Connection error. Try again.' });
+		});
+	}
+
 	function showResult(data) {
 		document.getElementById('main-card').style.display = 'none';
 		var rc = document.getElementById('result-card'),
@@ -239,7 +284,7 @@
 			rm = document.getElementById('result-msg'),
 			rd = document.getElementById('result-duration'),
 			rt = document.getElementById('result-tag');
-		rc.style.display = 'block';
+		rc.style.display = 'flex';
 		rd.style.display = 'none';
 		rt.style.display = 'none';
 		document.getElementById('pin-display').classList.remove('focused');
@@ -247,7 +292,7 @@
 		if (!data.success) {
 			rc.className = 'card result-card error-card';
 			rn.className = 'result-name error-text';
-			rn.textContent = 'PIN Not Found';
+			rn.textContent = mode === 'login' ? 'Login Failed' : 'PIN Not Found';
 			rm.textContent = data.message || 'Please check your PIN and try again.';
 		} else if (data.event === 'IN') {
 			rc.className = 'card result-card in';
@@ -281,14 +326,14 @@
 		pin = '';
 		var disp = document.getElementById('pin-display');
 		disp.className = 'pin-display focused';
-		disp.textContent = '​';
+		document.getElementById('pin-digits').textContent = '​';
 		document.getElementById('submit-btn').disabled = true;
-		document.getElementById('submit-btn').textContent = 'Check In / Out';
 		document.getElementById('main-card').style.display = 'block';
 		document.getElementById('result-card').style.display = 'none';
 		document.getElementById('session-type').value = 'Meeting';
 		document.getElementById('event-name').value = '';
 		document.getElementById('event-name-wrap').classList.add('hidden');
+		applyMode();
 	}
 
 	function formatDuration(hours) {
@@ -305,9 +350,11 @@
 		if (inEventField) { if (e.key === 'Enter') submitPin(); return; }
 		if (e.key >= '0' && e.key <= '9') { e.preventDefault(); pressKey(e.key); }
 		else if (e.key === 'Backspace') { e.preventDefault(); deleteLast(); }
-		else if (e.key === 'Escape') { e.preventDefault(); clearPin(); }
+		else if (e.key === 'Escape') { e.preventDefault(); mode === 'login' ? exitLoginMode() : clearPin(); }
 		else if (e.key === 'Enter') { e.preventDefault(); submitPin(); }
 	});
+
+	applyMode();
 </script>
 </body>
 </html>

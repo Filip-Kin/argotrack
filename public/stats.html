@@ -87,23 +87,35 @@
                 </div>
             </div>
 
+            <div class="row">
+                <div class="col s12">
+                    <h3>Hours by Session Type</h3>
+                    <table class="striped" id="types">
+                        <thead>
+                            <tr id="types-header">
+                                <th>Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="types-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <script src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.0.3-alpha/dist/js/materialize.min.js"></script>
             <script>
                 M.AutoInit();
 
-                let PIN = localStorage.getItem('stats_pin');
-
+                // Auth is handled on the kiosk login screen (tap the logo). The
+                // mentor PIN lives in sessionStorage, which expires on tab close
+                // and is cleared whenever the login screen (/) is loaded.
+                const PIN = sessionStorage.getItem('stats_pin');
                 if (!PIN) {
-                    PIN = prompt('Enter mentor PIN');
-                    if (!PIN) {
-                        alert('PIN required');
-                        throw new Error('No PIN');
-                    }
-                    localStorage.setItem('stats_pin', PIN);
+                    window.location.replace('/');
+                    throw new Error('No stats session');
                 }
 
                 document.getElementById('logout-btn')?.addEventListener('click', () => {
-                    localStorage.removeItem('stats_pin');
+                    sessionStorage.removeItem('stats_pin');
                     window.location.replace('/');
                 });
 
@@ -124,7 +136,14 @@
                     const overallHeader = document.getElementById('overall-header');
                     const overallBody = document.getElementById('overall-body');
 
-                    const res = await fetch('/stats?pin=' + encodeURIComponent(PIN)).then(res => res.json());
+                    const resp = await fetch('/stats?pin=' + encodeURIComponent(PIN));
+                    if (!resp.ok) {
+                        // PIN no longer valid / not a mentor — back to login screen.
+                        sessionStorage.removeItem('stats_pin');
+                        window.location.replace('/');
+                        return;
+                    }
+                    const res = await resp.json();
                     const stats = res.stats;
                     const overall = res.overall;
                     const months = Object.keys(overall.months);
@@ -163,6 +182,8 @@
 
 
                     updateAttn(stats, months);
+
+                    updateTypes(stats, overall, res.sessionTypes || []);
 
 
                     document.getElementById('attn-switch').addEventListener('change', () => {
@@ -260,6 +281,46 @@
                                 }
                             });
                         }
+                    }
+                }
+
+                function sumByType(bt) {
+                    if (!bt) return 0;
+                    return Object.values(bt).reduce((a, b) => a + b, 0);
+                }
+
+                function updateTypes(stats, overall, sessionTypes) {
+                    const header = document.getElementById('types-header');
+                    const body = document.getElementById('types-body');
+
+                    header.innerHTML = '<th>Name</th>'
+                        + sessionTypes.map(t => `<th>${t}</th>`).join('')
+                        + '<th>Total</th>';
+                    body.innerHTML = '';
+
+                    const overallRow = document.createElement('tr');
+                    let oTotal = 0;
+                    overallRow.innerHTML = '<td><strong>Overall</strong></td>'
+                        + sessionTypes.map(t => {
+                            const v = (overall.byType && overall.byType[t]) || 0;
+                            oTotal += v;
+                            return `<td>${fmt(v, 2)}</td>`;
+                        }).join('')
+                        + `<td>${fmt(oTotal, 2)}</td>`;
+                    body.appendChild(overallRow);
+
+                    const sorted = stats.slice().sort((a, b) => sumByType(b.byType) - sumByType(a.byType));
+                    for (const user of sorted) {
+                        const row = document.createElement('tr');
+                        let total = 0;
+                        row.innerHTML = `<td>${user.name}</td>`
+                            + sessionTypes.map(t => {
+                                const v = (user.byType && user.byType[t]) || 0;
+                                total += v;
+                                return `<td>${fmt(v, 2)}</td>`;
+                            }).join('')
+                            + `<td>${fmt(total, 2)}</td>`;
+                        body.appendChild(row);
                     }
                 }
 

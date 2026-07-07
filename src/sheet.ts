@@ -447,6 +447,7 @@ interface UserStats extends MonthStat {
     pin: string;
     name: string;
     months: { [key: number]: MonthStat };
+    byType?: Record<string, number>;
 }
 
 function emptyMonth(): MonthStat {
@@ -517,6 +518,26 @@ export async function getStats() {
             mm.attendanceWithExcused = pct(mm.attended + mm.excused, mm.attended + mm.excused + mm.absent);
         }
 
-        return { overall, stats };
+        // Hours by session type (Meeting/Outreach/Competition), from the raw
+        // Sessions log — surfaced on the stats page.
+        const overallByType: Record<string, number> = {};
+        const byPinType = new Map<string, Record<string, number>>();
+        const typeSet = new Set<string>();
+        const sessionRows = await sessionsSheet!.getRows();
+        for (const r of sessionRows) {
+            if (String(r.get('event')).toUpperCase() !== 'OUT') continue;
+            const p = String(r.get('pin'));
+            const st = (r.get('sessionType') || 'Meeting').trim() || 'Meeting';
+            const h = parseFloat(r.get('hours')) || 0;
+            typeSet.add(st);
+            if (!byPinType.has(p)) byPinType.set(p, {});
+            byPinType.get(p)![st] = (byPinType.get(p)![st] || 0) + h;
+            overallByType[st] = (overallByType[st] || 0) + h;
+        }
+        const sessionTypes = Array.from(typeSet).sort();
+        for (const u of stats) u.byType = byPinType.get(String(u.pin)) || {};
+        (overall as any).byType = overallByType;
+
+        return { overall, stats, sessionTypes };
     });
 }
