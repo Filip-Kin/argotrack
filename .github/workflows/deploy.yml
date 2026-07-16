@@ -2,7 +2,7 @@ name: Build on NAS and deploy argotrack
 
 on:
   push:
-    branches: [argotrack]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
