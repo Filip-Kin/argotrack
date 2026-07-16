@@ -21,14 +21,24 @@ const USERS_HEADERS = [
     'pin', 'fname', 'lname', 'email', 'type', 'gender',
     'login', 'logout', 'hours', 'total', 'loggedin',
     'sessionType', 'sessionName',
+    // Roster metadata copied from the Argonauts Apps Script app (portal/report use these).
+    'studentType', 'department', 'driveTeam',
 ];
 const SESSIONS_HEADERS = [
     'timestamp', 'pin', 'name', 'type', 'event', 'sessionType', 'eventName', 'hours',
 ];
+// Coach-app data tabs (season minimums, requirement checklists, per-season meeting-day
+// counts). Seasons/Helpers are simple header-row tabs; Checklist is a transposed grid
+// (see readChecklist) so it only gets a title on self-provision, not a header row.
+const SEASONS_HEADERS = ['name', 'start', 'end', 'minNew', 'minVeteran', 'minCaptain'];
+const HELPERS_HEADERS = ['season', 'totalDays'];
 
 let usersSheet: GoogleSpreadsheetWorksheet | undefined;
 let logSheet: GoogleSpreadsheetWorksheet | undefined;
 let sessionsSheet: GoogleSpreadsheetWorksheet | undefined;
+let seasonsSheet: GoogleSpreadsheetWorksheet | undefined;
+let checklistSheet: GoogleSpreadsheetWorksheet | undefined;
+let helpersSheet: GoogleSpreadsheetWorksheet | undefined;
 let connectPromise: Promise<boolean> | undefined;
 
 type UsersRowData = {
@@ -45,6 +55,9 @@ type UsersRowData = {
     loggedin: string;
     sessionType: string;
     sessionName: string;
+    studentType: string;
+    department: string;
+    driveTeam: string;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -65,11 +78,22 @@ async function doConnect(): Promise<boolean> {
         || (await doc.addSheet({ title: 'Log', headerValues: ['pin', 'fname', 'lname'] }));
     sessionsSheet = doc.sheetsByTitle['Sessions']
         || (await doc.addSheet({ title: 'Sessions', headerValues: SESSIONS_HEADERS }));
+    seasonsSheet = doc.sheetsByTitle['Seasons']
+        || (await doc.addSheet({ title: 'Seasons', headerValues: SEASONS_HEADERS }));
+    // Checklist is a transposed grid (deadline/req/detail/consequence header rows, then
+    // one row per student). Just ensure the tab exists; readChecklist parses the layout.
+    checklistSheet = doc.sheetsByTitle['Checklist']
+        || (await doc.addSheet({ title: 'Checklist' }));
+    helpersSheet = doc.sheetsByTitle['Helpers']
+        || (await doc.addSheet({ title: 'Helpers', headerValues: HELPERS_HEADERS }));
 
-    // Keep tab order Users(0), Log(1), Sessions(2) — ops read/write by index.
+    // Keep tab order Users(0), Log(1), Sessions(2), Seasons(3), Checklist(4), Helpers(5).
     await usersSheet.updateProperties({ index: 0 });
     await logSheet.updateProperties({ index: 1 });
     await sessionsSheet.updateProperties({ index: 2 });
+    await seasonsSheet.updateProperties({ index: 3 });
+    await checklistSheet.updateProperties({ index: 4 });
+    await helpersSheet.updateProperties({ index: 5 });
 
     // Ensure header rows exist / are correct. Cheap and idempotent.
     await usersSheet.setHeaderRow(USERS_HEADERS);
@@ -78,6 +102,12 @@ async function doConnect(): Promise<boolean> {
     });
     await sessionsSheet.loadHeaderRow().catch(async () => {
         await sessionsSheet!.setHeaderRow(SESSIONS_HEADERS);
+    });
+    await seasonsSheet.loadHeaderRow().catch(async () => {
+        await seasonsSheet!.setHeaderRow(SEASONS_HEADERS);
+    });
+    await helpersSheet.loadHeaderRow().catch(async () => {
+        await helpersSheet!.setHeaderRow(HELPERS_HEADERS);
     });
 
     // Make sure every roster pin has a Log row (so per-day hours have a home).
@@ -542,4 +572,465 @@ export async function getStats() {
 
         return { overall, stats, sessionTypes };
     });
+}
+
+// ═════════════════════════════════════════════════════════════
+// Argonauts coach-app parity: seasons, checklist, reports, portal.
+// Everything here computes from the append-only Sessions log + the
+// Seasons/Checklist/Helpers config tabs — no change to the punch/Log path.
+// Ported from the coach's Google Apps Script (argo-attendance-code-gs.txt).
+// ═════════════════════════════════════════════════════════════
+
+/** A completed (OUT) attendance event, normalized for reporting. */
+type OutEvent = { pin: string; date: Date; hours: number; sessionType: string };
+
+async function loadOutEvents(): Promise<OutEvent[]> {
+    const rows = await sessionsSheet!.getRows();
+    const out: OutEvent[] = [];
+    for (const r of rows) {
+        if (String(r.get('event')).toUpperCase() !== 'OUT') continue;
+        const ts = new Date(r.get('timestamp'));
+        if (isNaN(ts.getTime())) continue;
+        out.push({
+            pin: String(r.get('pin')).trim(),
+            date: ts,
+            hours: parseFloat(r.get('hours')) || 0,
+            sessionType: (r.get('sessionType') || 'Meeting').trim() || 'Meeting',
+        });
+    }
+    return out;
+}
+
+type Season = {
+    name: string; start: Date; end: Date;
+    minNew: number; minVeteran: number; minCaptain: number;
+};
+
+async function loadSeasons(): Promise<Season[]> {
+    const rows = await seasonsSheet!.getRows();
+    const seasons: Season[] = [];
+    for (const r of rows) {
+        const name = String(r.get('name') || '').trim();
+        if (!name) continue;
+        const start = new Date(r.get('start'));
+        const end = new Date(r.get('end'));
+        end.setHours(23, 59, 59, 999);
+        seasons.push({
+            name, start, end,
+            minNew: parseFloat(r.get('minNew')) || 0,
+            minVeteran: parseFloat(r.get('minVeteran')) || 0,
+            minCaptain: parseFloat(r.get('minCaptain')) || 0,
+        });
+    }
+    return seasons;
+}
+
+async function loadHelperDays(): Promise<Record<string, number>> {
+    const rows = await helpersSheet!.getRows();
+    const map: Record<string, number> = {};
+    for (const r of rows) {
+        const name = String(r.get('season') || '').trim();
+        const days = parseFloat(r.get('totalDays')) || 0;
+        if (name) map[name] = days;
+    }
+    return map;
+}
+
+/** yyyy-MM-dd from a date-only value (UTC parts avoid tz off-by-one). */
+function ymd(d: Date): string {
+    if (isNaN(d.getTime())) return '';
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+/** Map a raw checklist cell to a status + display value (ported verbatim). */
+function parseStatusValue(raw: string, threshold: number | null): { status: string; displayValue: string } {
+    const lower = String(raw || '').toLowerCase().trim();
+    if (lower === 'n/a' || lower === 'na') return { status: 'na', displayValue: 'N/A' };
+    if (lower === 'yes' || lower === 'y' || lower === 'complete') return { status: 'complete', displayValue: 'Complete' };
+    if (lower === 'no' || lower === 'n' || lower === '') return { status: 'incomplete', displayValue: '' };
+    if (lower === 'partial' || lower === 'in progress') return { status: 'partial', displayValue: raw };
+    const num = parseFloat(raw);
+    if (!isNaN(num)) {
+        if (threshold !== null && !isNaN(threshold)) {
+            if (num >= threshold) return { status: 'complete', displayValue: String(raw) };
+            return { status: num > 0 ? 'partial' : 'incomplete', displayValue: String(raw) };
+        }
+        return { status: num > 0 ? 'partial' : 'incomplete', displayValue: String(raw) };
+    }
+    return { status: 'incomplete', displayValue: raw };
+}
+
+type ChecklistItem = { col: number; name: string; detail: string; deadline: string; consequence: string };
+type ChecklistData = {
+    items: ChecklistItem[];
+    deadlines: { name: string; consequence: string; items: ChecklistItem[] }[];
+    grid: any[][];
+    pinRow: Map<string, number>;
+};
+
+/**
+ * Read the transposed Checklist grid:
+ *   row1 deadline group (merged) · row2 requirement · row3 detail · row4 consequence
+ *   row5+ one row per student: col A=PIN, col B=Name, col C+ = status per requirement.
+ */
+async function readChecklist(): Promise<ChecklistData> {
+    await checklistSheet!.loadCells();
+    const rowCount = checklistSheet!.rowCount;
+    const colCount = checklistSheet!.columnCount;
+    const grid: any[][] = [];
+    for (let r = 0; r < rowCount; r++) {
+        const rowArr: any[] = [];
+        for (let c = 0; c < colCount; c++) {
+            const v = checklistSheet!.getCell(r, c).value;
+            rowArr.push(v === null || v === undefined ? '' : v);
+        }
+        grid.push(rowArr);
+    }
+
+    const items: ChecklistItem[] = [];
+    let lastDl = '';
+    for (let c = 2; c < colCount; c++) {
+        const reqName = String(grid[1]?.[c] ?? '').trim();
+        if (!reqName) continue;
+        const dl = String(grid[0]?.[c] ?? '').trim() || lastDl;
+        if (dl) lastDl = dl;
+        items.push({
+            col: c,
+            name: reqName,
+            detail: String(grid[2]?.[c] ?? '').trim(),
+            deadline: dl,
+            consequence: String(grid[3]?.[c] ?? '').trim(),
+        });
+    }
+
+    const deadlines: ChecklistData['deadlines'] = [];
+    let cur: ChecklistData['deadlines'][number] | null = null;
+    for (const it of items) {
+        if (!cur || cur.name !== it.deadline) {
+            cur = { name: it.deadline, consequence: it.consequence, items: [] };
+            deadlines.push(cur);
+        }
+        cur.items.push(it);
+    }
+
+    const pinRow = new Map<string, number>();
+    for (let r = 4; r < rowCount; r++) {
+        const p = String(grid[r]?.[0] ?? '').trim();
+        if (p) pinRow.set(p, r);
+    }
+
+    return { items, deadlines, grid, pinRow };
+}
+
+/** Seasons list for the coach dashboard dropdown. */
+export async function getSeasons() {
+    return withReconnect(async () => {
+        const seasons = (await loadSeasons()).map((s) => ({
+            name: s.name,
+            startDate: ymd(s.start),
+            endDate: ymd(s.end),
+            minNew: s.minNew,
+            minVeteran: s.minVeteran,
+            minCaptain: s.minCaptain,
+        }));
+        return { success: true, seasons };
+    });
+}
+
+/** Roster with each member's current IN/OUT status. */
+export async function getRoster() {
+    return withReconnect(async () => {
+        const rows = await usersSheet!.getRows<UsersRowData>();
+        const students = rows
+            .filter((r) => String(r.get('pin')).trim())
+            .map((r) => ({
+                name: `${r.get('fname')} ${r.get('lname')}`.trim(),
+                pin: String(r.get('pin')).trim(),
+                role: (r.get('type') || '').toUpperCase() === 'MENTOR' ? 'Mentor' : 'Student',
+                status: String(r.get('loggedin')).toUpperCase() === 'TRUE' ? 'IN' : 'OUT',
+            }));
+        return { success: true, students };
+    });
+}
+
+/** Date-range attendance/hours report for the coach dashboard. */
+export async function getReport(startDate: string, endDate: string) {
+    return withReconnect(async () => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const userRows = await usersSheet!.getRows<UsersRowData>();
+        const outs = await loadOutEvents();
+
+        const map = new Map<string, {
+            name: string; pin: string; role: string; totalMins: number;
+            sessions: number; days: Set<string>; byType: Record<string, number>;
+        }>();
+        for (const u of userRows) {
+            const pin = String(u.get('pin')).trim();
+            if (!pin) continue;
+            map.set(pin, {
+                name: `${u.get('fname')} ${u.get('lname')}`.trim(),
+                pin,
+                role: (u.get('type') || '').toUpperCase() === 'MENTOR' ? 'Mentor' : 'Student',
+                totalMins: 0, sessions: 0, days: new Set<string>(),
+                byType: { Meeting: 0, Outreach: 0, Competition: 0 },
+            });
+        }
+
+        const allDays = new Set<string>();
+        for (const e of outs) {
+            if (e.date < start || e.date > end) continue;
+            allDays.add(e.date.toDateString());
+            const s = map.get(e.pin);
+            if (!s) continue;
+            const mins = e.hours * 60;
+            s.totalMins += mins;
+            s.sessions += 1;
+            s.days.add(e.date.toDateString());
+            if (s.byType[e.sessionType] === undefined) s.byType[e.sessionType] = 0;
+            s.byType[e.sessionType] += mins;
+        }
+        const totalMeetingDays = allDays.size;
+
+        const students = Array.from(map.values()).map((s) => ({
+            name: s.name,
+            pin: s.pin,
+            role: s.role,
+            totalMins: Math.round(s.totalMins),
+            sessions: s.sessions,
+            daysPresent: s.days.size,
+            attendancePct: totalMeetingDays > 0 ? Math.round((s.days.size / totalMeetingDays) * 100) : 0,
+            avgSession: s.sessions > 0 ? Math.round(s.totalMins / s.sessions) : 0,
+            meetingMins: Math.round(s.byType.Meeting || 0),
+            outreachMins: Math.round(s.byType.Outreach || 0),
+            competitionMins: Math.round(s.byType.Competition || 0),
+        }));
+        students.sort((a, b) => b.totalMins - a.totalMins);
+
+        return { success: true, students, totalMeetingDays, startDate, endDate };
+    });
+}
+
+/** Per-student requirement completion grid for the coach dashboard. */
+export async function getChecklistOverview() {
+    return withReconnect(async () => {
+        const cl = await readChecklist();
+        const userRows = await usersSheet!.getRows<UsersRowData>();
+        const rosterMap = new Map<string, { name: string; role: string; studentType: string }>();
+        for (const u of userRows) {
+            const pin = String(u.get('pin')).trim();
+            if (!pin) continue;
+            rosterMap.set(pin, {
+                name: `${u.get('fname')} ${u.get('lname')}`.trim(),
+                role: (u.get('type') || '').toUpperCase() === 'MENTOR' ? 'Mentor' : 'Student',
+                studentType: u.get('studentType') || 'Veteran',
+            });
+        }
+
+        const requirements = cl.items.map((it) => ({ col: it.col, name: it.name, deadline: it.deadline }));
+        const students: any[] = [];
+        for (const [pin, rowIdx] of cl.pinRow) {
+            const info = rosterMap.get(pin) || { name: pin, role: 'Student', studentType: 'Veteran' };
+            let complete = 0, incomplete = 0, partial = 0, na = 0;
+            const statuses: string[] = [];
+            for (const it of cl.items) {
+                const raw = String(cl.grid[rowIdx]?.[it.col] ?? '').trim();
+                const st = parseStatusValue(raw, null).status;
+                if (st === 'complete') complete++;
+                else if (st === 'na') na++;
+                else if (st === 'partial') partial++;
+                else incomplete++;
+                statuses.push(st);
+            }
+            const total = complete + incomplete + partial; // exclude n/a
+            students.push({
+                pin, name: info.name, role: info.role, studentType: info.studentType,
+                complete, incomplete, partial, na, total,
+                pct: total > 0 ? Math.round((complete / total) * 100) : 0,
+                statuses,
+            });
+        }
+        students.sort((a, b) => a.pct - b.pct); // least complete first
+        return { success: true, students, requirements };
+    });
+}
+
+/** Captain-eligibility policy, ported from the coach app (team-specific thresholds). */
+function computeCaptainEligibility(
+    pin: string, cl: ChecklistData, rowIdx: number | undefined,
+    mine: OutEvent[], seasons: Season[], helperDays: Record<string, number>, outs: OutEvent[]
+) {
+    let volHours = 0, fallAttPct = 0, buildAttPct = 0;
+    let appStatus = 'incomplete', interviewStatus = 'incomplete';
+
+    if (rowIdx !== undefined) {
+        for (const it of cl.items) {
+            const rn = it.name.toLowerCase();
+            const rv = String(cl.grid[rowIdx]?.[it.col] ?? '').trim().toLowerCase();
+            const isMet = rv === 'yes' || rv === 'y' || rv === 'complete';
+            const numVal = parseFloat(rv) || 0;
+            if (rn.includes('volunteer') && rn.includes('hour')) volHours = numVal;
+            if (rn.includes('fall') && (rn.includes('attendance') || rn.includes('meeting'))) fallAttPct = numVal;
+            if (rn.includes('build') && rn.includes('attendance')) buildAttPct = numVal;
+            if (rn.includes('application') && rn.includes('captain')) appStatus = isMet ? 'complete' : 'incomplete';
+            if (rn.includes('interview')) interviewStatus = isMet ? 'complete' : 'incomplete';
+        }
+    }
+
+    // Fall back to the Sessions log when the checklist doesn't carry the numbers.
+    if (volHours === 0) {
+        let volMins = 0;
+        for (const e of mine) volMins += e.hours * 60;
+        volHours = Math.round((volMins / 60) * 10) / 10;
+    }
+    if (fallAttPct === 0 || buildAttPct === 0) {
+        for (const s of seasons) {
+            const nm = s.name.toLowerCase();
+            let totalDays = helperDays[s.name] || 0;
+            if (totalDays === 0) {
+                const allDays = new Set<string>();
+                for (const e of outs) if (e.date >= s.start && e.date <= s.end) allDays.add(e.date.toDateString());
+                totalDays = allDays.size;
+            }
+            if (totalDays === 0) continue;
+            const myDays = new Set<string>();
+            for (const e of mine) if (e.date >= s.start && e.date <= s.end) myDays.add(e.date.toDateString());
+            const pctC = Math.round((myDays.size / totalDays) * 100);
+            if (nm.includes('fall') && fallAttPct === 0) fallAttPct = pctC;
+            if (nm.includes('build') && buildAttPct === 0) buildAttPct = pctC;
+        }
+    }
+
+    const volMet = volHours >= 40;
+    let attSum = 0, attCount = 0;
+    if (fallAttPct > 0) { attSum += fallAttPct; attCount++; }
+    if (buildAttPct > 0) { attSum += buildAttPct; attCount++; }
+    const avgAtt = attCount > 0 ? Math.round(attSum / attCount) : 0;
+    const attMet = avgAtt >= 75;
+    const allMet = volMet && attMet && appStatus === 'complete' && interviewStatus === 'complete';
+
+    return {
+        deadline: 'May 2027',
+        overall: allMet,
+        criteria: [
+            { name: 'Volunteer Hours', detail: 'Must log 40+ volunteer hours from March 2026 - December 2026', status: volMet ? 'complete' : (volHours > 0 ? 'partial' : 'incomplete'), displayValue: volHours + ' hrs', target: '40 hrs' },
+            { name: 'Attendance Average', detail: 'Average of Fall Training + Build Season attendance must be 75% or higher (Sept 2026 - Feb 2027)', status: attMet ? 'complete' : (avgAtt > 0 ? 'partial' : 'incomplete'), displayValue: avgAtt + '%', target: '75%' },
+            { name: 'Captain Application', detail: 'Google Form application must be submitted by the date provided (typically April/May)', status: appStatus, displayValue: appStatus === 'complete' ? 'Submitted' : '', target: 'Submitted' },
+            { name: 'Coach Interview', detail: 'Sit through an interview with coaches about the position(s) you are applying for (typically April/May)', status: interviewStatus, displayValue: interviewStatus === 'complete' ? 'Complete' : '', target: 'Complete' },
+        ],
+    };
+}
+
+/** Student self-service portal: season hours, attendance, checklists, captain eligibility. */
+export async function getStudentPortal(pin: string) {
+    return withReconnect(async () => {
+        pin = String(pin).trim();
+        const userRows = await usersSheet!.getRows<UsersRowData>();
+        const u = userRows.find((r) => String(r.get('pin')).trim() === pin);
+        if (!u) return { success: false, message: 'PIN not recognized.' };
+
+        const role = (u.get('type') || '').toUpperCase() === 'MENTOR' ? 'Mentor' : 'Student';
+        const studentType = u.get('studentType') || 'Veteran';
+        const name = `${u.get('fname')} ${u.get('lname')}`.trim();
+
+        const seasons = await loadSeasons();
+        const helperDays = await loadHelperDays();
+        const outs = await loadOutEvents();
+        const mine = outs.filter((e) => e.pin === pin);
+
+        // Hours per season vs the required minimum for this student type.
+        const seasonBlocks = seasons.map((s) => {
+            let minHours = 0;
+            if (role !== 'Mentor') {
+                minHours = studentType === 'New' ? s.minNew : studentType === 'Captain' ? s.minCaptain : s.minVeteran;
+            }
+            let actualMins = 0;
+            for (const e of mine) if (e.date >= s.start && e.date <= s.end) actualMins += e.hours * 60;
+            return { name: s.name, actualMins: Math.round(actualMins), minMins: Math.round(minHours * 60) };
+        });
+
+        // Attendance per season (students only).
+        const attendance: any[] = [];
+        for (const s of seasons) {
+            if (role === 'Mentor') continue;
+            const minPct = studentType === 'New' ? 80 : studentType === 'Captain' ? 80 : 60;
+            const myDays = new Set<string>();
+            const allDays = new Set<string>();
+            for (const e of outs) {
+                if (e.date < s.start || e.date > s.end) continue;
+                allDays.add(e.date.toDateString());
+                if (e.pin === pin) myDays.add(e.date.toDateString());
+            }
+            let totalDays = helperDays[s.name] || 0;
+            if (totalDays === 0) totalDays = allDays.size;
+            const attPct = totalDays > 0 ? Math.round((myDays.size / totalDays) * 100) : 0;
+            attendance.push({ seasonName: s.name, attendancePct: attPct, minPct, presentDays: myDays.size, totalDays });
+        }
+
+        // Requirement checklists grouped by deadline.
+        const cl = await readChecklist();
+        const rowIdx = cl.pinRow.get(pin);
+        const deadlines = cl.deadlines.map((dl) => ({
+            name: dl.name,
+            consequence: dl.consequence,
+            items: dl.items.map((it) => {
+                const raw = rowIdx !== undefined ? String(cl.grid[rowIdx]?.[it.col] ?? '').trim() : '';
+                const parsed = parseStatusValue(raw, null);
+                return { name: it.name, detail: it.detail, status: parsed.status, displayValue: parsed.displayValue, threshold: null };
+            }),
+        }));
+
+        const captainEligibility = role !== 'Mentor'
+            ? computeCaptainEligibility(pin, cl, rowIdx, mine, seasons, helperDays, outs)
+            : null;
+
+        return {
+            success: true,
+            name, role, studentType,
+            department: u.get('department') || '',
+            driveTeam: u.get('driveTeam') || '',
+            seasons: seasonBlocks,
+            attendance,
+            deadlines,
+            captainEligibility,
+        };
+    });
+}
+
+/** Sign out everyone currently in (coach dashboard button + kiosk PIN 9999). */
+export async function signOutAll(): Promise<{ count: number; names: string[] }> {
+    await ensureConnected();
+    const rows = await usersSheet!.getRows<UsersRowData>();
+    const now = getNow();
+    const names: string[] = [];
+    for (const user of rows) {
+        if (String(user.get('loggedin')).toUpperCase() !== 'TRUE') continue;
+        const pin = String(user.get('pin'));
+        const loginAt = new Date(user.get('login'));
+        const hours = Math.max(0, (now.getTime() - loginAt.getTime()) / 36e5);
+        const total = parseFloat(String(user.get('total')) || '0') + hours;
+        const sType = user.get('sessionType') || 'Meeting';
+        const sName = user.get('sessionName') || '';
+        const name = `${user.get('fname')} ${user.get('lname')}`.trim();
+        const type = user.get('type') || 'STUDENT';
+
+        user.set('logout', now.toISOString());
+        user.set('hours', hours);
+        user.set('total', total);
+        user.set('loggedin', 'FALSE');
+        await user.save();
+
+        await addHoursForDay(pin, hours, user.get('fname'), user.get('lname'));
+        await sessionsSheet!.addRow({
+            timestamp: now.toISOString(), pin, name, type,
+            event: 'OUT', sessionType: sType, eventName: sName, hours: hours.toFixed(4),
+        });
+        names.push(name);
+    }
+    return { count: names.length, names };
 }

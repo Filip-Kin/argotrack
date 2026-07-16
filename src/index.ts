@@ -1,8 +1,25 @@
 import express, { Express, Request, Response } from 'express';
-import { connect, getStats, getSignedIn, getUserFromPin, healthPing, punch } from './sheet';
+import {
+    connect, getStats, getSignedIn, getUserFromPin, healthPing, punch,
+    getStudentPortal, getReport, getRoster, getSeasons, getChecklistOverview, signOutAll,
+} from './sheet';
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
+
+// Coach-app config (were hardcoded in the Apps Script; env-driven here).
+const COACH_PASSWORD = process.env.COACH_PASSWORD || '';
+const SIGNOUT_ALL_PIN = process.env.SIGNOUT_ALL_PIN || '9999';
+
+/** Guard a coach-only route by the shared password (?password=...). */
+function requireCoach(req: Request, res: Response): boolean {
+    const password = String(req.query.password || '');
+    if (!COACH_PASSWORD || password !== COACH_PASSWORD) {
+        res.status(403).json({ success: false, message: 'Incorrect password.' });
+        return false;
+    }
+    return true;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Crash safety
@@ -33,6 +50,15 @@ async function handlePunch(req: Request, res: Response) {
     try {
         const pin = String(req.query.pin || '').trim();
         if (!pin) return res.status(400).json({ success: false, message: 'PIN required' });
+
+        // Kiosk end-of-night: the sign-out-all PIN signs everyone out at once.
+        if (pin === SIGNOUT_ALL_PIN) {
+            const { count } = await signOutAll();
+            const message = count === 0
+                ? 'No students were currently signed in.'
+                : `Signed out ${count} ${count === 1 ? 'person' : 'people'}. Good night!`;
+            return res.json({ success: true, event: 'SIGNOUT_ALL', count, message, msg: message });
+        }
 
         const sessionType = req.query.sessionType ? String(req.query.sessionType) : undefined;
         const eventName = req.query.eventName ? String(req.query.eventName) : undefined;
@@ -77,6 +103,80 @@ app.get('/stats', async (req: Request, res: Response) => {
     } catch (e: any) {
         console.error('[stats error]', e?.message || e);
         return res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────
+// Argonauts coach-app parity endpoints (ported from the Apps Script).
+// ─────────────────────────────────────────────────────────────
+
+// Student self-service portal (PIN-gated, no coach password).
+app.get('/portal', async (req: Request, res: Response) => {
+    try {
+        const pin = String(req.query.pin || '').trim();
+        if (!pin) return res.status(400).json({ success: false, message: 'PIN required' });
+        return res.json(await getStudentPortal(pin));
+    } catch (e: any) {
+        console.error('[portal error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error. Try again.' });
+    }
+});
+
+// Coach date-range report.
+app.get('/report', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        const startDate = String(req.query.startDate || '');
+        const endDate = String(req.query.endDate || '');
+        return res.json(await getReport(startDate, endDate));
+    } catch (e: any) {
+        console.error('[report error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Coach roster with live in/out status.
+app.get('/roster', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await getRoster());
+    } catch (e: any) {
+        console.error('[roster error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Coach seasons list (for the report date presets).
+app.get('/seasons', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await getSeasons());
+    } catch (e: any) {
+        console.error('[seasons error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Coach checklist overview grid.
+app.get('/checklist', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await getChecklistOverview());
+    } catch (e: any) {
+        console.error('[checklist error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Coach sign-out-all (password-gated; the kiosk uses the PIN path in /punch).
+app.get('/signoutall', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        const { count } = await signOutAll();
+        return res.json({ success: true, count });
+    } catch (e: any) {
+        console.error('[signoutall error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argonauts Student Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Montserrat", sans-serif; background: #b8860b; color: #000; min-height: 100vh; padding: 3vh 4vw; }
+    .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 3vh; }
+    .logo-wrap { width: 52px; height: 52px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+    .topbar-title { font-size: clamp(16px,3vw,24px); font-weight: 700; color: #000; letter-spacing: 1.5px; text-transform: uppercase; }
+    .topbar-sub { font-size: clamp(10px,1.5vw,12px); color: #1a0f00; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+
+    /* LOGIN */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 70vh; }
+    .login-card { background: rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.3); border-radius: 16px; padding: clamp(24px,4vw,40px); width: 100%; max-width: 380px; text-align: center; }
+    .login-logo { width: 70px; height: 70px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto 14px; }
+    .login-card h2 { font-size: clamp(16px,2.5vw,20px); font-weight: 700; color: #000; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .login-card p { font-size: 14px; color: #1a0f00; font-weight: 600; margin-bottom: 20px; }
+    .divider { height: 2px; background: rgba(0,0,0,0.15); margin: 14px 0; border-radius: 2px; }
+    input[type=password] { width: 100%; padding: 12px 14px; background: rgba(0,0,0,0.10); border: 2px solid rgba(0,0,0,0.3); border-radius: 8px; font-size: 16px; color: #000; font-family: "Montserrat", sans-serif; font-weight: 700; margin-bottom: 12px; outline: none; caret-color: #000; transition: border-color 0.15s; }
+    input[type=password]:focus { border-color: #000; background: rgba(0,0,0,0.15); }
+    input[type=password]::placeholder { color: rgba(0,0,0,0.4); font-weight: 500; }
+    .btn { width: 100%; background: #000; border: none; border-radius: 8px; padding: 14px; font-size: 14px; font-weight: 700; color: #b8860b; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; font-family: "Montserrat", sans-serif; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .error-msg { color: #3a0000; font-size: 13px; margin-top: 8px; font-weight: 700; background: rgba(139,0,0,0.12); border-radius: 6px; padding: 8px 12px; display: none; }
+    .error-msg.show { display: block; }
+
+    /* PORTAL */
+    .portal { display: none; max-width: 800px; margin: 0 auto; }
+    .student-header { background: #000; border-radius: 14px; padding: clamp(14px,2.5vw,24px); margin-bottom: 2vh; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .student-name { font-size: clamp(18px,3.5vw,26px); font-weight: 700; color: #b8860b; }
+    .student-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .meta-badge { background: #b8860b; color: #000; border-radius: 6px; padding: 5px 14px; font-size: 13px; font-weight: 700; }
+    .logout-btn { background: transparent; border: 2px solid rgba(184,134,11,0.5); border-radius: 7px; padding: 8px 18px; color: #b8860b; font-size: 13px; cursor: pointer; font-family: "Montserrat", sans-serif; font-weight: 700; transition: all 0.15s; }
+    .logout-btn:hover { border-color: #b8860b; background: rgba(184,134,11,0.1); }
+
+    .section-label { font-size: 12px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 2px; margin: 2.5vh 0 12px; border-left: 4px solid #000; padding-left: 10px; }
+
+    .motivation-card { background: #000; color: #b8860b; border-radius: 12px; padding: 18px 22px; margin-bottom: 2vh; font-size: clamp(14px,2vw,16px); font-weight: 700; text-align: center; line-height: 1.6; }
+
+    /* KEY */
+    .key-card { background: #000; border-radius: 12px; padding: 18px 20px; margin-bottom: 2vh; }
+    .key-title { font-size: 12px; font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+    .key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .key-item { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px 12px; }
+    .key-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; border-radius: 8px; font-size: 13px; font-weight: 700; padding: 0 14px; flex-shrink: 0; white-space: nowrap; }
+    .key-desc { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); line-height: 1.4; }
+
+    /* HOURS */
+    .hours-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 2vh; }
+    .hours-card { background: #000; border-radius: 12px; padding: clamp(14px,2vw,20px); text-align: center; }
+    .hours-label { font-size: 11px; font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+    .hours-value { font-size: clamp(24px,4vw,34px); font-weight: 700; color: #fff; }
+    .hours-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; font-weight: 600; }
+    .progress-bar-bg { height: 10px; background: rgba(255,255,255,0.15); border-radius: 5px; overflow: hidden; margin-top: 12px; }
+    .progress-bar-fill { height: 10px; border-radius: 5px; transition: width 0.5s; }
+    .fill-green { background: #4caf50; }
+    .fill-yellow { background: #f5a623; }
+    .fill-red { background: #e53935; }
+    .progress-label { font-size: 13px; font-weight: 700; margin-top: 8px; }
+    .prog-green { color: #4caf50; }
+    .prog-yellow { color: #f5a623; }
+    .prog-red { color: #e53935; }
+
+    /* ATTENDANCE */
+    .attend-card { background: #000; border-radius: 12px; padding: clamp(14px,2vw,20px); margin-bottom: 2vh; }
+    .attend-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+    .attend-row:last-child { margin-bottom: 0; }
+    .attend-name { font-size: 14px; font-weight: 700; color: #fff; flex: 1; min-width: 120px; }
+    .attend-bar-wrap { flex: 2; min-width: 120px; }
+    .attend-pct { font-size: 15px; font-weight: 700; min-width: 60px; text-align: right; }
+    .attend-min { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); display: block; text-align: right; }
+
+    /* CHECKLIST */
+    .deadline-block { background: #000; border-radius: 14px; overflow: hidden; margin-bottom: 2vh; }
+    .deadline-header { background: rgba(184,134,11,0.15); border-bottom: 2px solid #b8860b; padding: 14px 20px; }
+    .deadline-name { font-size: clamp(13px,1.8vw,15px); font-weight: 700; color: #b8860b; }
+    .deadline-sub { font-size: 12px; color: rgba(184,134,11,0.8); font-weight: 600; margin-top: 4px; }
+    .checklist-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .checklist-item:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; margin-top: 1px; }
+    .check-yes  { background: #4caf50; color: #fff; }
+    .check-no   { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .check-partial { background: #f5a623; color: #000; border-radius: 6px; font-size: 13px; }
+    .check-na   { background: #2a2a2a; color: #888; border: 2px dashed #555; font-size: 11px; }
+    .item-content { flex: 1; }
+    .item-name   { font-size: clamp(13px,1.7vw,15px); font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .item-detail { font-size: clamp(11px,1.4vw,13px); color: rgba(255,255,255,0.6); line-height: 1.5; font-weight: 500; }
+    .item-status { flex-shrink: 0; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 8px; white-space: nowrap; align-self: center; min-width: 100px; text-align: center; }
+    .status-complete   { background: #4caf50; color: #fff; }
+    .status-incomplete { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .status-partial    { background: #f5a623; color: #000; }
+    .status-na         { background: #2a2a2a; color: #aaa; border: 2px dashed #555; font-style: italic; }
+
+    .captain-header { background: #000; border-radius: 14px 14px 0 0; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .captain-title { font-size: clamp(14px,2vw,16px); font-weight: 700; color: #b8860b; }
+    .captain-deadline { font-size: 12px; color: rgba(184,134,11,0.6); font-weight: 600; }
+    .captain-eligible-badge { background: #4caf50; color: #fff; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+    .captain-ineligible-badge { background: rgba(229,57,53,0.15); color: #e53935; border: 2px solid #e53935; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+    .captain-table { background: #000; border-radius: 0 0 14px 14px; overflow: hidden; margin-bottom: 2vh; }
+    .captain-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .captain-row:last-child { border-bottom: none; }
+    .cap-icon { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; margin-top: 1px; }
+    .cap-yes  { background: #4caf50; color: #fff; }
+    .cap-no   { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .cap-part { background: #f5a623; color: #000; border-radius: 6px; font-size: 13px; }
+    .captain-item-content { flex: 1; }
+    .captain-item-name   { font-size: clamp(13px,1.7vw,15px); font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .captain-item-detail { font-size: clamp(10px,1.4vw,12px); color: rgba(255,255,255,0.55); line-height: 1.5; font-weight: 500; }
+    .captain-item-status { flex-shrink: 0; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 8px; white-space: nowrap; align-self: center; min-width: 100px; text-align: center; }
+    .cap-status-complete   { background: #4caf50; color: #fff; }
+    .cap-status-partial    { background: #f5a623; color: #000; }
+    .cap-status-incomplete { background: transparent; color: #e53935; border: 2px solid #e53935; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo-wrap">&#x1F419;</div>
+    <div>
+      <div class="topbar-title">Argonauts Tracker</div>
+      <div class="topbar-sub">Student &amp; Parent Portal</div>
+    </div>
+  </div>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">&#x1F419;</div>
+      <h2>Student Portal</h2>
+      <p>Enter your 4-digit PIN to view your progress</p>
+      <div class="divider"></div>
+      <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="4">
+      <button class="btn" id="login-btn">View My Progress</button>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+  </div>
+
+  <div class="portal" id="portal">
+    <div class="student-header">
+      <div>
+        <div class="student-name" id="s-name"></div>
+        <div class="student-meta" id="s-meta"></div>
+      </div>
+      <button class="logout-btn" id="logout-btn">&#8592; Sign Out</button>
+    </div>
+
+    <div class="motivation-card" id="motivation-card"></div>
+
+    <div class="key-card">
+      <div class="key-title">Status Key</div>
+      <div class="key-grid">
+        <div class="key-item">
+          <span class="key-badge status-complete">&#10003; Complete</span>
+          <span class="key-desc">Requirement fully met</span>
+        </div>
+        <div class="key-item">
+          <span class="key-badge status-incomplete">Incomplete</span>
+          <span class="key-desc">Not yet started or submitted</span>
+        </div>
+        <div class="key-item">
+          <span class="key-badge status-partial">In Progress</span>
+          <span class="key-desc">Partially met or number entered</span>
+        </div>
+        <div class="key-item">
+          <span class="key-badge status-na">N/A</span>
+          <span class="key-desc">Does not apply to you</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="hours-section">
+      <div class="section-label">Hours Progress</div>
+      <div class="hours-row" id="hours-row"></div>
+    </div>
+
+    <div id="attendance-section">
+      <div class="section-label">Attendance Progress</div>
+      <div class="attend-card" id="attend-card"></div>
+    </div>
+
+    <div class="section-label">Requirements Checklist</div>
+    <div id="checklist-content"></div>
+
+    <div id="captain-section" style="display:none">
+      <div class="section-label" style="margin-top:2.5vh">27/28 Captain Eligibility</div>
+      <div id="captain-content"></div>
+    </div>
+  </div>
+
+  <script>
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoUfAZgkXad7AL6JGu5n9XLozdPGnKlV7YdsyDRKpNoMaI49yIPN1wlZrBeAc9s2kn/exec";
+
+    document.getElementById("login-btn").addEventListener("click", loadPortal);
+    document.getElementById("pin-input").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") loadPortal();
+    });
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    // argotrack exposes /portal?pin= rather than the Apps Script ?action= URL.
+    var ACTION_ROUTES = { getStudentPortal: "/portal" };
+    function post(params) {
+      var path = ACTION_ROUTES[params.action] || ("/" + params.action);
+      var qs = Object.keys(params).filter(function(k) { return k !== "action"; }).map(function(k) {
+        return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+      }).join("&");
+      return fetch(path + (qs ? "?" + qs : ""))
+        .then(function(r) { return r.text(); })
+        .then(function(t) { return JSON.parse(t); });
+    }
+
+    function showError(msg) {
+      var el = document.getElementById("login-error");
+      el.textContent = msg;
+      el.classList.add("show");
+    }
+
+    function loadPortal() {
+      var pin = document.getElementById("pin-input").value.trim();
+      if (pin.length !== 4) { showError("Please enter your 4-digit PIN."); return; }
+      var btn = document.getElementById("login-btn");
+      btn.innerHTML = "<span class=\"spinner\"></span>Loading...";
+      btn.disabled = true;
+      post({ action: "getStudentPortal", pin: pin })
+      .then(function(data) {
+        btn.innerHTML = "View My Progress"; btn.disabled = false;
+        if (!data.success) { showError(data.message || "PIN not found."); return; }
+        renderPortal(data);
+      })
+      .catch(function(err) {
+        btn.innerHTML = "View My Progress"; btn.disabled = false;
+        showError("Connection error: " + err.message);
+      });
+    }
+
+    function renderPortal(data) {
+      document.getElementById("login-wrap").style.display = "none";
+      document.getElementById("portal").style.display = "block";
+
+      document.getElementById("s-name").textContent = data.name;
+      var meta = "";
+      if (data.role) meta += "<span class=\"meta-badge\">" + esc(data.role) + "</span>";
+      if (data.studentType && data.role !== "Mentor") meta += "<span class=\"meta-badge\">" + esc(data.studentType) + "</span>";
+      if (data.department) meta += "<span class=\"meta-badge\" style=\"background:#b8860b;color:#000\">" + esc(data.department) + "</span>";
+      if (data.driveTeam && data.driveTeam.toLowerCase() === "yes") meta += "<span class=\"meta-badge\" style=\"background:#8b0000;color:#fff\">Drive Team Eligible</span>";
+      document.getElementById("s-meta").innerHTML = meta;
+
+      var totalPct = 0; var seasonCount = 0;
+      (data.seasons || []).forEach(function(s) {
+        if (s.minMins > 0) { totalPct += Math.min(100, Math.round((s.actualMins / s.minMins) * 100)); seasonCount++; }
+      });
+      var avgPct = seasonCount > 0 ? Math.round(totalPct / seasonCount) : 100;
+      var msg = "";
+      if (data.role === "Mentor") {
+        msg = "Thank you for mentoring the Argonauts! Your time makes a difference.";
+      } else if (avgPct >= 100) {
+        msg = "You have met your hour requirements - great work this season!";
+      } else if (avgPct >= 75) {
+        msg = "You are " + avgPct + "% of the way to your goal - keep it up!";
+      } else if (avgPct >= 40) {
+        msg = "You are at " + avgPct + "% of your goal - more build sessions will get you there!";
+      } else {
+        msg = "You are at " + avgPct + "% of your goal - make sure to attend upcoming sessions!";
+      }
+      document.getElementById("motivation-card").textContent = msg;
+
+      if (!data.seasons || data.seasons.length === 0 || data.role === "Mentor") {
+        document.getElementById("hours-section").style.display = "none";
+      } else {
+        var hoursHtml = "";
+        data.seasons.forEach(function(s) {
+          var pct = s.minMins > 0 ? Math.min(100, Math.round((s.actualMins / s.minMins) * 100)) : 100;
+          var fillClass = pct >= 100 ? "fill-green" : pct >= 60 ? "fill-yellow" : "fill-red";
+          var progClass = pct >= 100 ? "prog-green" : pct >= 60 ? "prog-yellow" : "prog-red";
+          var progLabel = pct >= 100 ? "Goal met!" : pct + "% of goal";
+          hoursHtml += "<div class=\"hours-card\">" +
+            "<div class=\"hours-label\">" + esc(s.name) + "</div>" +
+            "<div class=\"hours-value\">" + fmtMins(s.actualMins) + "</div>" +
+            "<div class=\"hours-sub\">Goal: " + fmtMins(s.minMins) + "</div>" +
+            "<div class=\"progress-bar-bg\"><div class=\"progress-bar-fill " + fillClass + "\" style=\"width:" + pct + "%\"></div></div>" +
+            "<div class=\"progress-label " + progClass + "\">" + progLabel + "</div>" +
+            "</div>";
+        });
+        document.getElementById("hours-row").innerHTML = hoursHtml;
+      }
+
+      if (!data.attendance || data.attendance.length === 0) {
+        document.getElementById("attendance-section").style.display = "none";
+      } else {
+        var attHtml = "";
+        data.attendance.forEach(function(a) {
+          var pct = a.attendancePct;
+          var fillClass = pct >= a.minPct ? "fill-green" : pct >= (a.minPct * 0.75) ? "fill-yellow" : "fill-red";
+          var progClass = pct >= a.minPct ? "prog-green" : pct >= (a.minPct * 0.75) ? "prog-yellow" : "prog-red";
+          attHtml += "<div class=\"attend-row\">" +
+            "<div class=\"attend-name\">" + esc(a.seasonName) + "</div>" +
+            "<div class=\"attend-bar-wrap\"><div class=\"progress-bar-bg\"><div class=\"progress-bar-fill " + fillClass + "\" style=\"width:" + Math.min(100, pct) + "%\"></div></div></div>" +
+            "<div><div class=\"attend-pct " + progClass + "\">" + pct + "%</div><span class=\"attend-min\">min " + a.minPct + "%</span></div>" +
+            "</div>";
+        });
+        document.getElementById("attend-card").innerHTML = attHtml;
+      }
+
+      if (!data.deadlines || data.deadlines.length === 0) {
+        document.getElementById("checklist-content").innerHTML = "<div style=\"color:rgba(0,0,0,0.6);font-size:14px;font-weight:600;padding:10px 0\">No checklist data yet - check back soon.</div>";
+      } else {
+        var html = "";
+        data.deadlines.forEach(function(dl) {
+          html += "<div class=\"deadline-block\">" +
+            "<div class=\"deadline-header\">" +
+            "<div class=\"deadline-name\">" + esc(dl.name) + "</div>" +
+            "<div class=\"deadline-sub\">" + esc(dl.consequence) + "</div>" +
+            "</div>";
+          dl.items.forEach(function(item) {
+            var s = item.status;
+            var dv = item.displayValue || "";
+            var threshold = item.threshold;
+            var iconClass = s === "complete" ? "check-yes" : s === "partial" ? "check-partial" : s === "na" ? "check-na" : "check-no";
+            var icon = s === "complete" ? "&#10003;" : s === "partial" ? "~" : s === "na" ? "N/A" : "";
+            var statusHtml = "";
+            var displayDv = formatDisplayValue(dv, threshold, item.name);
+            if (s === "complete" && dv && dv !== "Complete") {
+              statusHtml = "<div class=\"item-status status-complete\">&#10003; " + displayDv + "</div>";
+            } else if (s === "complete") {
+              statusHtml = "<div class=\"item-status status-complete\">&#10003; Complete</div>";
+            } else if (s === "partial" && dv) {
+              statusHtml = "<div class=\"item-status status-partial\">" + displayDv + "</div>";
+            } else if (s === "partial") {
+              statusHtml = "<div class=\"item-status status-partial\">In Progress</div>";
+            } else if (s === "na") {
+              statusHtml = "<div class=\"item-status status-na\">N/A</div>";
+            } else {
+              statusHtml = "<div class=\"item-status status-incomplete\">Incomplete</div>";
+            }
+            html += "<div class=\"checklist-item\">" +
+              "<div class=\"check-icon " + iconClass + "\">" + icon + "</div>" +
+              "<div class=\"item-content\"><div class=\"item-name\">" + esc(item.name) + "</div><div class=\"item-detail\">" + esc(item.detail) + "</div></div>" +
+              statusHtml + "</div>";
+          });
+          html += "</div>";
+        });
+        document.getElementById("checklist-content").innerHTML = html;
+      }
+
+      // Render captain eligibility section
+      if (data.captainEligibility) {
+        renderCaptainEligibility(data.captainEligibility);
+      }
+    }
+
+    function renderCaptainEligibility(cap) {
+      if (!cap) return;
+      document.getElementById("captain-section").style.display = "block";
+
+      var overallBadge = cap.overall
+        ? "<span class=\"captain-eligible-badge\">&#10003; Eligible</span>"
+        : "<span class=\"captain-ineligible-badge\">Not Yet Eligible</span>";
+
+      var html = "<div class=\"captain-header\">" +
+        "<div><div class=\"captain-title\">27/28 Captain Eligibility</div>" +
+        "<div class=\"captain-deadline\">Deadline: " + esc(cap.deadline) + "</div></div>" +
+        overallBadge + "</div>";
+
+      html += "<div class=\"captain-table\">";
+      cap.criteria.forEach(function(c) {
+        var iconClass = c.status === "complete" ? "cap-yes" : c.status === "partial" ? "cap-part" : "cap-no";
+        var icon = c.status === "complete" ? "&#10003;" : c.status === "partial" ? "~" : "";
+        var statusClass = c.status === "complete" ? "cap-status-complete" : c.status === "partial" ? "cap-status-partial" : "cap-status-incomplete";
+        var statusText = c.status === "complete" ? "&#10003; " + esc(c.displayValue || "Met") :
+                         c.status === "partial"  ? esc(c.displayValue) + " / " + esc(c.target) :
+                         "Not Met";
+        html += "<div class=\"captain-row\">" +
+          "<div class=\"cap-icon " + iconClass + "\">" + icon + "</div>" +
+          "<div class=\"captain-item-content\">" +
+            "<div class=\"captain-item-name\">" + esc(c.name) + "</div>" +
+            "<div class=\"captain-item-detail\">" + esc(c.detail) + "</div>" +
+          "</div>" +
+          "<div class=\"captain-item-status " + statusClass + "\">" + statusText + "</div>" +
+          "</div>";
+      });
+      html += "</div>";
+      document.getElementById("captain-content").innerHTML = html;
+    }
+
+    function logout() {
+      document.getElementById("pin-input").value = "";
+      document.getElementById("login-error").classList.remove("show");
+      document.getElementById("login-wrap").style.display = "flex";
+      document.getElementById("portal").style.display = "none";
+    }
+
+    function fmtMins(mins) {
+      if (!mins || mins === 0) return "0 min";
+      var h = Math.floor(mins / 60); var m = mins % 60;
+      if (h === 0) return m + " min"; if (m === 0) return h + "h"; return h + "h " + m + "m";
+    }
+
+    function formatDisplayValue(dv, threshold, itemName) {
+      if (!dv) return "";
+      var num = parseFloat(dv);
+      var name = String(itemName || "").toLowerCase();
+      // Attendance items - show as percentage
+      if (!isNaN(num) && (name.indexOf("attendance") !== -1 || name.indexOf("meeting") !== -1)) {
+        var pctStr = Math.round(num) + "%";
+        if (threshold) return pctStr + " / " + Math.round(threshold) + "%";
+        return pctStr;
+      }
+      // Hour/volunteer items - show as "X hrs"
+      if (!isNaN(num) && (name.indexOf("hour") !== -1 || name.indexOf("volunteer") !== -1)) {
+        var hrsStr = num + " hrs";
+        if (threshold) return hrsStr + " / " + threshold + " hrs";
+        return hrsStr;
+      }
+      // Default - show value with threshold if present
+      if (threshold) return esc(dv) + " / " + threshold;
+      return esc(dv);
+    }
+
+    function esc(s) {
+      return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
