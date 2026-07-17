@@ -9,14 +9,14 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "Montserrat", sans-serif; background: #b8860b; color: #000; min-height: 100vh; padding: 3vh 4vw; }
     .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 3vh; }
-    .logo-wrap { width: 52px; height: 52px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+    .logo-img { width: 52px; height: 52px; object-fit: contain; background: #000; border-radius: 50%; padding: 6px; flex-shrink: 0; }
     .topbar-title { font-size: clamp(16px,3vw,24px); font-weight: 700; color: #000; letter-spacing: 1.5px; text-transform: uppercase; }
     .topbar-sub { font-size: clamp(10px,1.5vw,12px); color: #1a0f00; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
 
     /* LOGIN */
     .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 70vh; }
     .login-card { background: rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.3); border-radius: 16px; padding: clamp(24px,4vw,40px); width: 100%; max-width: 380px; text-align: center; }
-    .login-logo { width: 70px; height: 70px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto 14px; }
+    .login-logo { width: 70px; height: 70px; object-fit: contain; background: #000; border-radius: 50%; padding: 8px; margin: 0 auto 14px; }
     .login-card h2 { font-size: clamp(16px,2.5vw,20px); font-weight: 700; color: #000; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
     .login-card p { font-size: 14px; color: #1a0f00; font-weight: 600; margin-bottom: 20px; }
     .divider { height: 2px; background: rgba(0,0,0,0.15); margin: 14px 0; border-radius: 2px; }
@@ -120,7 +120,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="logo-wrap">&#x1F419;</div>
+    <img class="logo-img" src="/logo.png" alt="Argonauts Logo" onerror="this.style.display='none'" />
     <div>
       <div class="topbar-title">Argonauts Tracker</div>
       <div class="topbar-sub">Student &amp; Parent Portal</div>
@@ -129,7 +129,7 @@
 
   <div class="login-wrap" id="login-wrap">
     <div class="login-card">
-      <div class="login-logo">&#x1F419;</div>
+      <img class="login-logo" src="/logo.png" alt="Argonauts Logo" onerror="this.style.display='none'" />
       <h2>Student Portal</h2>
       <p>Enter your 4-digit PIN to view your progress</p>
       <div class="divider"></div>
