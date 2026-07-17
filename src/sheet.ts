@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
+import { GoogleSpreadsheet, GoogleSpreadsheetWorksheet, GoogleSpreadsheetRow } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import { getNow, localDateString } from './util';
 
@@ -417,44 +417,59 @@ async function punchLocked(pin: string, sessionType?: string, eventName?: string
             };
         } else {
             // Sign OUT
-            const loginAt = new Date(user.get('login'));
-            const hours = Math.max(0, (now.getTime() - loginAt.getTime()) / 36e5);
-            const total = parseFloat(String(user.get('total')) || '0') + hours;
-            // Session type/name were captured at sign-in; fall back to any passed value.
-            const sType = user.get('sessionType') || sessionType || 'Meeting';
-            const sName = user.get('sessionName') || eventName || '';
-
-            user.set('logout', now.toISOString());
-            user.set('hours', hours);
-            user.set('total', total);
-            user.set('loggedin', 'FALSE');
-            await user.save();
-
-            await addHoursForDay(pin, hours, user.get('fname'), user.get('lname'));
-
-            await sessionsSheet!.addRow({
-                timestamp: now.toISOString(),
-                pin,
-                name,
-                type,
-                event: 'OUT',
-                sessionType: sType,
-                eventName: sName,
-                hours: hours.toFixed(4),
-            });
-
+            const r = await finalizeSignOut(user, pin, sessionType, eventName);
             return {
                 success: true,
                 event: 'OUT',
-                name,
+                name: r.name,
                 message: 'Signed out',
-                sessionType: sType,
-                eventName: sName,
-                duration: hours,
-                total,
+                sessionType: r.sType,
+                eventName: r.sName,
+                duration: r.hours,
+                total: r.total,
             };
         }
     }
+}
+
+/** Perform the sign-out writes (Users row, Log day-hours, Sessions row) shared
+ *  by punch()'s OUT branch, signOutAll(), and signOutOne(). */
+async function finalizeSignOut(
+    user: GoogleSpreadsheetRow<UsersRowData>,
+    pin: string,
+    sessionTypeOverride?: string,
+    eventNameOverride?: string
+): Promise<{ name: string; type: string; hours: number; total: number; sType: string; sName: string }> {
+    const now = getNow();
+    const loginAt = new Date(user.get('login'));
+    const hours = Math.max(0, (now.getTime() - loginAt.getTime()) / 36e5);
+    const total = parseFloat(String(user.get('total')) || '0') + hours;
+    // Session type/name were captured at sign-in; fall back to any passed value.
+    const sType = user.get('sessionType') || sessionTypeOverride || 'Meeting';
+    const sName = user.get('sessionName') || eventNameOverride || '';
+    const name = `${user.get('fname')} ${user.get('lname')}`.trim();
+    const type = user.get('type') || 'STUDENT';
+
+    user.set('logout', now.toISOString());
+    user.set('hours', hours);
+    user.set('total', total);
+    user.set('loggedin', 'FALSE');
+    await user.save();
+
+    await addHoursForDay(pin, hours, user.get('fname'), user.get('lname'));
+
+    await sessionsSheet!.addRow({
+        timestamp: now.toISOString(),
+        pin,
+        name,
+        type,
+        event: 'OUT',
+        sessionType: sType,
+        eventName: sName,
+        hours: hours.toFixed(4),
+    });
+
+    return { name, type, hours, total, sType, sName };
 }
 
 /** Names currently signed in, split into mentors and students. */
@@ -795,6 +810,8 @@ export async function getRoster() {
                 pin: String(r.get('pin')).trim(),
                 role: (r.get('type') || '').toUpperCase() === 'MENTOR' ? 'Mentor' : 'Student',
                 status: String(r.get('loggedin')).toUpperCase() === 'TRUE' ? 'IN' : 'OUT',
+                sessionType: r.get('sessionType') || '',
+                login: r.get('login') || '',
             }));
         return { success: true, students };
     });
@@ -1051,31 +1068,28 @@ export async function getStudentPortal(pin: string) {
 export async function signOutAll(): Promise<{ count: number; names: string[] }> {
     await ensureConnected();
     const rows = await usersSheet!.getRows<UsersRowData>();
-    const now = getNow();
     const names: string[] = [];
     for (const user of rows) {
         if (String(user.get('loggedin')).toUpperCase() !== 'TRUE') continue;
         const pin = String(user.get('pin')).trim();
-        const loginAt = new Date(user.get('login'));
-        const hours = Math.max(0, (now.getTime() - loginAt.getTime()) / 36e5);
-        const total = parseFloat(String(user.get('total')) || '0') + hours;
-        const sType = user.get('sessionType') || 'Meeting';
-        const sName = user.get('sessionName') || '';
-        const name = `${user.get('fname')} ${user.get('lname')}`.trim();
-        const type = user.get('type') || 'STUDENT';
-
-        user.set('logout', now.toISOString());
-        user.set('hours', hours);
-        user.set('total', total);
-        user.set('loggedin', 'FALSE');
-        await user.save();
-
-        await addHoursForDay(pin, hours, user.get('fname'), user.get('lname'));
-        await sessionsSheet!.addRow({
-            timestamp: now.toISOString(), pin, name, type,
-            event: 'OUT', sessionType: sType, eventName: sName, hours: hours.toFixed(4),
-        });
-        names.push(name);
+        const r = await finalizeSignOut(user, pin);
+        names.push(r.name);
     }
     return { count: names.length, names };
+}
+
+/** Sign out one specific person by PIN (mentor portal's per-row Sign Out button,
+ *  password-gated at the route level). No-ops if they're not currently signed in. */
+export async function signOutOne(pin: string): Promise<{ success: boolean; name?: string; message?: string }> {
+    await ensureConnected();
+    return withPinLock(pin, async () => {
+        const rows = await usersSheet!.getRows<UsersRowData>();
+        const user = rows.find((r) => String(r.get('pin')).trim() === String(pin).trim());
+        if (!user) return { success: false, message: 'PIN not found.' };
+        if (String(user.get('loggedin')).toUpperCase() !== 'TRUE') {
+            return { success: false, message: 'Not currently signed in.' };
+        }
+        const r = await finalizeSignOut(user, pin);
+        return { success: true, name: r.name };
+    });
 }

@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import {
     connect, getStats, getSignedIn, getUserFromPin, healthPing, punch,
-    getStudentPortal, getReport, getRoster, getSeasons, getChecklistOverview, signOutAll,
+    getStudentPortal, getReport, getRoster, getSeasons, getChecklistOverview, signOutAll, signOutOne,
 } from './sheet';
 
 const app: Express = express();
@@ -16,6 +16,23 @@ function requireCoach(req: Request, res: Response): boolean {
     const password = String(req.query.password || '');
     if (!COACH_PASSWORD || password !== COACH_PASSWORD) {
         res.status(403).json({ success: false, message: 'Incorrect password.' });
+        return false;
+    }
+    return true;
+}
+
+/** Guard a mentor-only route by their personal PIN (?mentorPin=...). View-only:
+ *  proves "you're a mentor," same as /stats already does — write actions
+ *  (signing people out) still go through requireCoach separately. */
+async function requireMentor(req: Request, res: Response): Promise<boolean> {
+    const mentorPin = String(req.query.mentorPin || '');
+    if (!mentorPin) {
+        res.status(401).json({ success: false, message: 'Mentor PIN required.' });
+        return false;
+    }
+    const user = await getUserFromPin(mentorPin);
+    if (!user || (user.get('type') || '').toUpperCase() !== 'MENTOR') {
+        res.status(403).json({ success: false, message: 'Not a mentor PIN.' });
         return false;
     }
     return true;
@@ -176,6 +193,32 @@ app.get('/signoutall', async (req: Request, res: Response) => {
         return res.json({ success: true, count });
     } catch (e: any) {
         console.error('[signoutall error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Coach sign-out for one specific person (mentor portal's per-row button).
+// Password-gated like /signoutall — a mentor's own PIN only unlocks viewing.
+app.get('/signout', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        const pin = String(req.query.pin || '').trim();
+        if (!pin) return res.status(400).json({ success: false, message: 'PIN required.' });
+        return res.json(await signOutOne(pin));
+    } catch (e: any) {
+        console.error('[signout error]', e?.message || e);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Mentor-portal roster view (?mentorPin=... proves "you're a mentor"; no
+// write actions here — those still require the shared coach password above).
+app.get('/mentor/roster', async (req: Request, res: Response) => {
+    if (!(await requireMentor(req, res))) return;
+    try {
+        return res.json(await getRoster());
+    } catch (e: any) {
+        console.error('[mentor/roster error]', e?.message || e);
         return res.status(500).json({ success: false, message: 'Server error.' });
     }
 });

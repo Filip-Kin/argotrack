@@ -1,330 +1,773 @@
+<!DOCTYPE html>
 <html>
-    <head>
-        <title>Beartime - Stats</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argonauts Mentor Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Montserrat", sans-serif; background: #b8860b; color: #000; min-height: 100vh; padding: 3vh 4vw; }
+    .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 3vh; }
+    .logo-wrap { width: 52px; height: 52px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+    .topbar-title { font-size: clamp(16px,3vw,24px); font-weight: 700; color: #000; letter-spacing: 1.5px; text-transform: uppercase; }
+    .topbar-sub { font-size: clamp(10px,1.5vw,12px); color: #1a0f00; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+    .logout-btn { margin-left: auto; background: transparent; border: 2px solid rgba(0,0,0,0.3); border-radius: 7px; padding: 8px 18px; color: #000; font-size: 13px; cursor: pointer; font-family: "Montserrat", sans-serif; font-weight: 700; transition: all 0.15s; }
+    .logout-btn:hover { border-color: #000; background: rgba(0,0,0,0.08); }
 
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.0.3-alpha/dist/css/materialize.min.css">
+    .page-wrap { max-width: 900px; margin: 0 auto; }
+    .section-label { font-size: 12px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 2px; margin: 2.5vh 0 12px; border-left: 4px solid #000; padding-left: 10px; }
 
-        <style>
-            #time th,
-            #attn th {
-                cursor: pointer;
+    /* CARDS */
+    .card-block { background: rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.3); border-radius: 14px; padding: clamp(14px,2.5vw,20px); margin-bottom: 2vh; }
+    .empty-note { color: rgba(0,0,0,0.5); font-size: 13px; font-weight: 600; padding: 10px 2px; }
+
+    /* BUTTONS */
+    .btn-sm { background: #b8860b; border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 700; color: #000; cursor: pointer; letter-spacing: 0.5px; text-transform: uppercase; font-family: "Montserrat", sans-serif; transition: opacity 0.15s; white-space: nowrap; }
+    .btn-sm:hover { opacity: 0.85; }
+    .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm.danger { background: #8b0000; color: #fff; }
+    .btn-sm.subtle { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+
+    /* WHO'S SIGNED IN */
+    .signedin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .signedin-summary { font-size: 13px; font-weight: 700; color: rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: 1px; }
+    .signedin-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #000; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; flex-wrap: wrap; }
+    .signedin-row:last-child { margin-bottom: 0; }
+    .signedin-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .signedin-sub { font-size: 11px; color: rgba(184,134,11,0.85); font-weight: 600; margin-top: 2px; }
+    .role-mentor { background: #b8860b; color: #000; border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700; margin-right: 6px; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+    .status-in { background: #b8860b; color: #000; }
+    .status-out { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); }
+
+    /* LOOK UP A STUDENT */
+    #lookup-search { width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.10); border: 2px solid rgba(0,0,0,0.3); border-radius: 8px; font-size: 14px; color: #000; font-family: "Montserrat", sans-serif; font-weight: 600; outline: none; caret-color: #000; }
+    #lookup-search:focus { border-color: #000; background: rgba(0,0,0,0.15); }
+    #lookup-search::placeholder { color: rgba(0,0,0,0.4); }
+    .lookup-result { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #000; border-radius: 8px; padding: 9px 14px; margin-top: 8px; cursor: pointer; color: #fff; font-size: 13px; font-weight: 700; transition: opacity 0.15s; }
+    .lookup-result:hover { opacity: 0.8; }
+
+    /* PORTAL-STYLE DETAIL (shared with student portal look) */
+    .student-header { background: #000; border-radius: 14px; padding: clamp(14px,2.5vw,24px); margin: 12px 0 2vh; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .student-name { font-size: clamp(18px,3.5vw,26px); font-weight: 700; color: #b8860b; }
+    .student-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .meta-badge { background: #b8860b; color: #000; border-radius: 6px; padding: 5px 14px; font-size: 13px; font-weight: 700; }
+    .motivation-card { background: #000; color: #b8860b; border-radius: 12px; padding: 18px 22px; margin-bottom: 2vh; font-size: clamp(14px,2vw,16px); font-weight: 700; text-align: center; line-height: 1.6; }
+    .hours-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 2vh; }
+    .hours-card { background: #000; border-radius: 12px; padding: clamp(14px,2vw,20px); text-align: center; }
+    .hours-label { font-size: 11px; font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+    .hours-value { font-size: clamp(24px,4vw,34px); font-weight: 700; color: #fff; }
+    .hours-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; font-weight: 600; }
+    .progress-bar-bg { height: 10px; background: rgba(255,255,255,0.15); border-radius: 5px; overflow: hidden; margin-top: 12px; }
+    .progress-bar-fill { height: 10px; border-radius: 5px; transition: width 0.5s; }
+    .fill-green { background: #4caf50; } .fill-yellow { background: #f5a623; } .fill-red { background: #e53935; }
+    .progress-label { font-size: 13px; font-weight: 700; margin-top: 8px; }
+    .prog-green { color: #4caf50; } .prog-yellow { color: #f5a623; } .prog-red { color: #e53935; }
+    .attend-card { background: #000; border-radius: 12px; padding: clamp(14px,2vw,20px); margin-bottom: 2vh; }
+    .attend-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+    .attend-row:last-child { margin-bottom: 0; }
+    .attend-name { font-size: 14px; font-weight: 700; color: #fff; flex: 1; min-width: 120px; }
+    .attend-bar-wrap { flex: 2; min-width: 120px; }
+    .attend-pct { font-size: 15px; font-weight: 700; min-width: 60px; text-align: right; }
+    .attend-min { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); display: block; text-align: right; }
+    .deadline-block { background: #000; border-radius: 14px; overflow: hidden; margin-bottom: 2vh; }
+    .deadline-header { background: rgba(184,134,11,0.15); border-bottom: 2px solid #b8860b; padding: 14px 20px; }
+    .deadline-name { font-size: clamp(13px,1.8vw,15px); font-weight: 700; color: #b8860b; }
+    .deadline-sub { font-size: 12px; color: rgba(184,134,11,0.8); font-weight: 600; margin-top: 4px; }
+    .checklist-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .checklist-item:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; margin-top: 1px; }
+    .check-yes { background: #4caf50; color: #fff; }
+    .check-no { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .check-partial { background: #f5a623; color: #000; border-radius: 6px; font-size: 13px; }
+    .check-na { background: #2a2a2a; color: #888; border: 2px dashed #555; font-size: 11px; }
+    .item-content { flex: 1; }
+    .item-name { font-size: clamp(13px,1.7vw,15px); font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .item-detail { font-size: clamp(11px,1.4vw,13px); color: rgba(255,255,255,0.6); line-height: 1.5; font-weight: 500; }
+    .item-status { flex-shrink: 0; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 8px; white-space: nowrap; align-self: center; min-width: 100px; text-align: center; }
+    .status-complete { background: #4caf50; color: #fff; }
+    .status-incomplete { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .status-partial { background: #f5a623; color: #000; }
+    .status-na { background: #2a2a2a; color: #aaa; border: 2px dashed #555; font-style: italic; }
+    .captain-header { background: #000; border-radius: 14px 14px 0 0; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .captain-title { font-size: clamp(14px,2vw,16px); font-weight: 700; color: #b8860b; }
+    .captain-deadline { font-size: 12px; color: rgba(184,134,11,0.6); font-weight: 600; }
+    .captain-eligible-badge { background: #4caf50; color: #fff; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+    .captain-ineligible-badge { background: rgba(229,57,53,0.15); color: #e53935; border: 2px solid #e53935; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+    .captain-table { background: #000; border-radius: 0 0 14px 14px; overflow: hidden; margin-bottom: 2vh; }
+    .captain-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .captain-row:last-child { border-bottom: none; }
+    .cap-icon { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; margin-top: 1px; }
+    .cap-yes { background: #4caf50; color: #fff; }
+    .cap-no { background: transparent; color: #e53935; border: 2.5px solid #e53935; }
+    .cap-part { background: #f5a623; color: #000; border-radius: 6px; font-size: 13px; }
+    .captain-item-content { flex: 1; }
+    .captain-item-name { font-size: clamp(13px,1.7vw,15px); font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .captain-item-detail { font-size: clamp(10px,1.4vw,12px); color: rgba(255,255,255,0.55); line-height: 1.5; font-weight: 500; }
+    .captain-item-status { flex-shrink: 0; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 8px; white-space: nowrap; align-self: center; min-width: 100px; text-align: center; }
+    .cap-status-complete { background: #4caf50; color: #fff; }
+    .cap-status-partial { background: #f5a623; color: #000; }
+    .cap-status-incomplete { background: transparent; color: #e53935; border: 2px solid #e53935; }
+
+    /* TEAM STATS TABLES */
+    .table-wrap { background: #000; border-radius: 12px; overflow: hidden; overflow-x: auto; margin-bottom: 2vh; }
+    table { width: 100%; border-collapse: collapse; min-width: 480px; }
+    thead th { background: rgba(184,134,11,0.15); padding: clamp(9px,1.5vw,13px) clamp(10px,1.8vw,16px); text-align: left; font-size: clamp(9px,1.1vw,11px); font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid rgba(184,134,11,0.3); cursor: pointer; user-select: none; }
+    thead th:hover { background: rgba(184,134,11,0.25); }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(184,134,11,0.08); }
+    td { padding: clamp(9px,1.5vw,13px) clamp(10px,1.8vw,16px); font-size: clamp(12px,1.4vw,14px); color: #fff; font-weight: 500; }
+    .excused-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+    /* PASSWORD MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+    .modal-overlay.show { display: flex; }
+    .modal-card { background: #000; border: 2px solid #b8860b; border-radius: 14px; padding: 24px; width: 100%; max-width: 360px; text-align: center; }
+    .modal-card h3 { color: #b8860b; font-size: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .modal-card p { color: rgba(255,255,255,0.8); font-size: 13px; margin-bottom: 14px; font-weight: 600; }
+    .modal-card input { width: 100%; padding: 11px 14px; background: rgba(255,255,255,0.08); border: 2px solid rgba(184,134,11,0.4); border-radius: 8px; font-size: 14px; color: #fff; font-family: "Montserrat", sans-serif; font-weight: 600; margin-bottom: 10px; outline: none; caret-color: #b8860b; }
+    .modal-card input:focus { border-color: #b8860b; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .modal-actions .btn-sm { flex: 1; }
+    .modal-error { color: #ff6b6b; font-size: 12px; margin-top: 10px; font-weight: 700; min-height: 14px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo-wrap">&#x1F419;</div>
+    <div>
+      <div class="topbar-title">Argonauts Tracker</div>
+      <div class="topbar-sub">Mentor Portal</div>
+    </div>
+    <button class="logout-btn" id="logout-btn">&larr; Log Out</button>
+  </div>
+
+  <div class="page-wrap">
+    <div class="section-label">Who's Signed In</div>
+    <div class="card-block">
+      <div class="signedin-toolbar">
+        <span class="signedin-summary" id="signedin-summary">Loading...</span>
+        <button class="btn-sm danger" id="signout-all-btn">Sign Everyone Out</button>
+      </div>
+      <div id="signedin-list"></div>
+    </div>
+
+    <div class="section-label">Look Up a Student</div>
+    <div class="card-block">
+      <input type="text" id="lookup-search" placeholder="Type a name...">
+      <div id="lookup-results"></div>
+
+      <div id="lookup-detail" style="display:none">
+        <button class="btn-sm subtle" id="lookup-close-btn">&larr; Back to search</button>
+        <div class="student-header">
+          <div>
+            <div class="student-name" id="lu-s-name"></div>
+            <div class="student-meta" id="lu-s-meta"></div>
+          </div>
+        </div>
+        <div class="motivation-card" id="lu-motivation-card"></div>
+        <div id="lu-hours-section">
+          <div class="section-label">Hours Progress</div>
+          <div class="hours-row" id="lu-hours-row"></div>
+        </div>
+        <div id="lu-attendance-section">
+          <div class="section-label">Attendance Progress</div>
+          <div class="attend-card" id="lu-attend-card"></div>
+        </div>
+        <div class="section-label">Requirements Checklist</div>
+        <div id="lu-checklist-content"></div>
+        <div id="lu-captain-section" style="display:none">
+          <div class="section-label">27/28 Captain Eligibility</div>
+          <div id="lu-captain-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Team Stats</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="overall-header"></tr></thead>
+        <tbody id="overall-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Time</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="time-header"><th>Name</th></tr></thead>
+        <tbody id="time-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Attendance</div>
+    <label class="excused-toggle"><input type="checkbox" id="attn-switch"> Include Excused Absences</label>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="attn-header"><th>Name</th></tr></thead>
+        <tbody id="attn-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Hours by Session Type</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="types-header"><th>Name</th></tr></thead>
+        <tbody id="types-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="password-modal">
+    <div class="modal-card">
+      <h3>Coach Password Required</h3>
+      <p id="password-modal-msg"></p>
+      <input type="password" id="password-modal-input" placeholder="Coach password">
+      <div class="modal-actions">
+        <button class="btn-sm subtle" id="password-modal-cancel">Cancel</button>
+        <button class="btn-sm danger" id="password-modal-confirm">Confirm</button>
+      </div>
+      <div class="modal-error" id="password-modal-error"></div>
+    </div>
+  </div>
+
+  <script>
+    // Auth is handled on the kiosk login screen (tap the logo). The mentor PIN
+    // lives in sessionStorage, which expires on tab close and is cleared
+    // whenever the login screen (/) is loaded.
+    const PIN = sessionStorage.getItem('stats_pin');
+    if (!PIN) {
+      window.location.replace('/');
+      throw new Error('No stats session');
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', function() {
+      sessionStorage.removeItem('stats_pin');
+      window.location.replace('/');
+    });
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtTime(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    // ── Who's Signed In ─────────────────────────────────────────
+    var rosterCache = [];
+
+    function loadRoster() {
+      return fetch('/mentor/roster?mentorPin=' + encodeURIComponent(PIN))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) {
+            document.getElementById('signedin-summary').textContent = data.message || 'Could not load roster.';
+            return;
+          }
+          rosterCache = data.students;
+          renderSignedIn();
+          renderLookupResults();
+        })
+        .catch(function() {
+          document.getElementById('signedin-summary').textContent = 'Connection error.';
+        });
+    }
+
+    function renderSignedIn() {
+      var inList = rosterCache.filter(function(s) { return s.status === 'IN'; });
+      document.getElementById('signedin-summary').textContent =
+        inList.length === 0 ? 'Nobody signed in right now' : inList.length + ' signed in';
+      var el = document.getElementById('signedin-list');
+      if (inList.length === 0) {
+        el.innerHTML = '<div class="empty-note">Nobody signed in right now.</div>';
+        return;
+      }
+      el.innerHTML = inList.map(function(s) {
+        var roleBadge = s.role === 'Mentor' ? '<span class="role-mentor">Mentor</span>' : '';
+        var subParts = [];
+        if (s.sessionType) subParts.push(esc(s.sessionType));
+        if (s.login) subParts.push('since ' + fmtTime(s.login));
+        var sub = subParts.length ? '<div class="signedin-sub">' + subParts.join(' &middot; ') + '</div>' : '';
+        return '<div class="signedin-row" data-pin="' + esc(s.pin) + '" data-name="' + esc(s.name) + '">' +
+          '<div><div class="signedin-name">' + roleBadge + esc(s.name) + '</div>' + sub + '</div>' +
+          '<button class="btn-sm danger signout-btn">Sign Out</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    document.getElementById('signedin-list').addEventListener('click', function(e) {
+      var btn = e.target.closest('.signout-btn');
+      if (!btn) return;
+      var row = btn.closest('.signedin-row');
+      requestSignOut(row.dataset.pin, row.dataset.name);
+    });
+
+    // ── Coach-password modal (shared by single and sign-out-all) ──
+    var pendingAction = null;
+
+    function openPasswordModal(message, onConfirm) {
+      document.getElementById('password-modal-msg').textContent = message;
+      document.getElementById('password-modal-input').value = '';
+      document.getElementById('password-modal-error').textContent = '';
+      document.getElementById('password-modal').classList.add('show');
+      document.getElementById('password-modal-input').focus();
+      pendingAction = onConfirm;
+    }
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.remove('show');
+      pendingAction = null;
+    }
+    document.getElementById('password-modal-cancel').addEventListener('click', closePasswordModal);
+    document.getElementById('password-modal-confirm').addEventListener('click', function() {
+      var pw = document.getElementById('password-modal-input').value;
+      if (!pw) { document.getElementById('password-modal-error').textContent = 'Enter the coach password.'; return; }
+      if (!pendingAction) return;
+      var action = pendingAction;
+      var btn = document.getElementById('password-modal-confirm');
+      btn.disabled = true;
+      action(pw).then(function(ok) {
+        btn.disabled = false;
+        if (ok) closePasswordModal();
+      });
+    });
+    document.getElementById('password-modal-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('password-modal-confirm').click();
+    });
+
+    function requestSignOut(pin, name) {
+      openPasswordModal('Sign out ' + name + '?', function(pw) {
+        return fetch('/signout?password=' + encodeURIComponent(pw) + '&pin=' + encodeURIComponent(pin))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.success) {
+              document.getElementById('password-modal-error').textContent = data.message || 'Incorrect password.';
+              return false;
             }
+            loadRoster();
+            return true;
+          })
+          .catch(function() {
+            document.getElementById('password-modal-error').textContent = 'Connection error.';
+            return false;
+          });
+      });
+    }
 
-            .col {
-                margin: 20px 10px;
+    document.getElementById('signout-all-btn').addEventListener('click', function() {
+      openPasswordModal('Sign out everyone currently signed in?', function(pw) {
+        return fetch('/signoutall?password=' + encodeURIComponent(pw))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.success) {
+              document.getElementById('password-modal-error').textContent = data.message || 'Incorrect password.';
+              return false;
             }
-        </style>
+            loadRoster();
+            return true;
+          })
+          .catch(function() {
+            document.getElementById('password-modal-error').textContent = 'Connection error.';
+            return false;
+          });
+      });
+    });
 
-    </head>
+    // ── Look Up a Student ──────────────────────────────────────
+    document.getElementById('lookup-search').addEventListener('input', renderLookupResults);
 
-    <body>
-        <button
-            id="logout-btn"
-            class="btn red"
-            style="
-                position: fixed;
-                top: 16px;
-                right: 16px;
-                z-index: 1000;
-            "
-        >
-            Log out
-        </button>
+    function renderLookupResults() {
+      var q = document.getElementById('lookup-search').value.trim().toLowerCase();
+      var el = document.getElementById('lookup-results');
+      if (!q) { el.innerHTML = ''; return; }
+      var matches = rosterCache.filter(function(s) {
+        return s.name.toLowerCase().indexOf(q) !== -1;
+      }).slice(0, 8);
+      if (!matches.length) { el.innerHTML = '<div class="empty-note">No matches.</div>'; return; }
+      el.innerHTML = matches.map(function(s) {
+        var roleBadge = s.role === 'Mentor' ? '<span class="role-mentor">Mentor</span>' : '';
+        var statusBadge = s.status === 'IN'
+          ? '<span class="status-badge status-in">IN</span>'
+          : '<span class="status-badge status-out">out</span>';
+        return '<div class="lookup-result" data-pin="' + esc(s.pin) + '">' +
+          '<span>' + roleBadge + esc(s.name) + '</span>' + statusBadge + '</div>';
+      }).join('');
+    }
 
-        <div class="container center">
-            <div class="row">
-                <div class="col s12">
-                    <h1>Stats</h1>
-                    <table>
-                        <thread>
-                            <tr id="overall-header"></tr>
-                        </thread>
-                        <tbody id="overall-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12 m6">
-                    <h3>Time</h3>
-                </div>
-                <div class="col s12 m6">
-                    <h3>Attendance</h3>
-                    <div class="switch">
-                        Include Excused Absences
-                        <label>
-                            Off
-                            <input type="checkbox" id="attn-switch">
-                            <span class="lever"></span>
-                            On
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12 m6">
-                    <table class="striped" id="time">
-                        <thead>
-                            <tr id="time-header">
-                                <th>Name</th>
-                            </tr>
-                        </thead>
+    document.getElementById('lookup-results').addEventListener('click', function(e) {
+      var row = e.target.closest('.lookup-result');
+      if (!row) return;
+      loadLookupDetail(row.dataset.pin);
+    });
 
-                        <tbody id="time-body">
-                        </tbody>
-                    </table>
-                </div>
-                <div class="col s12 m6">
-                    <table class="striped" id="attn">
-                        <thead>
-                            <tr id="attn-header">
-                                <th>Name</th>
-                            </tr>
-                        </thead>
+    document.getElementById('lookup-close-btn').addEventListener('click', function() {
+      document.getElementById('lookup-detail').style.display = 'none';
+      document.getElementById('lookup-results').style.display = 'block';
+      document.getElementById('lookup-search').style.display = 'block';
+    });
 
-                        <tbody id="attn-body">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    function loadLookupDetail(pin) {
+      document.getElementById('lookup-detail').style.display = 'block';
+      document.getElementById('lookup-results').style.display = 'none';
+      document.getElementById('lookup-search').style.display = 'none';
+      document.getElementById('lu-s-name').textContent = 'Loading...';
+      document.getElementById('lu-s-meta').innerHTML = '';
+      fetch('/portal?pin=' + encodeURIComponent(pin))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { document.getElementById('lu-s-name').textContent = data.message || 'Not found.'; return; }
+          renderLookupPortal(data);
+        })
+        .catch(function() { document.getElementById('lu-s-name').textContent = 'Connection error.'; });
+    }
 
-            <div class="row">
-                <div class="col s12">
-                    <h3>Hours by Session Type</h3>
-                    <table class="striped" id="types">
-                        <thead>
-                            <tr id="types-header">
-                                <th>Name</th>
-                            </tr>
-                        </thead>
-                        <tbody id="types-body"></tbody>
-                    </table>
-                </div>
-            </div>
+    // Adapted from portal.html's renderPortal()/renderCaptainEligibility(),
+    // targeting the "lu-" prefixed ids in the embedded lookup panel instead.
+    function renderLookupPortal(data) {
+      document.getElementById('lu-s-name').textContent = data.name;
+      var meta = '';
+      if (data.role) meta += '<span class="meta-badge">' + esc(data.role) + '</span>';
+      if (data.studentType && data.role !== 'Mentor') meta += '<span class="meta-badge">' + esc(data.studentType) + '</span>';
+      if (data.department) meta += '<span class="meta-badge" style="background:#b8860b;color:#000">' + esc(data.department) + '</span>';
+      if (data.driveTeam && data.driveTeam.toLowerCase() === 'yes') meta += '<span class="meta-badge" style="background:#8b0000;color:#fff">Drive Team Eligible</span>';
+      document.getElementById('lu-s-meta').innerHTML = meta;
 
-            <script src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.0.3-alpha/dist/js/materialize.min.js"></script>
-            <script>
-                M.AutoInit();
+      var totalPct = 0, seasonCount = 0;
+      (data.seasons || []).forEach(function(s) {
+        if (s.minMins > 0) { totalPct += Math.min(100, Math.round((s.actualMins / s.minMins) * 100)); seasonCount++; }
+      });
+      var avgPct = seasonCount > 0 ? Math.round(totalPct / seasonCount) : 100;
+      var msg = '';
+      if (data.role === 'Mentor') {
+        msg = 'Thank you for mentoring the Argonauts!';
+      } else if (avgPct >= 100) {
+        msg = 'Met hour requirements - great work this season!';
+      } else if (avgPct >= 75) {
+        msg = avgPct + '% of the way to their goal.';
+      } else if (avgPct >= 40) {
+        msg = 'At ' + avgPct + '% of their goal.';
+      } else {
+        msg = 'At ' + avgPct + '% of their goal.';
+      }
+      document.getElementById('lu-motivation-card').textContent = msg;
 
-                // Auth is handled on the kiosk login screen (tap the logo). The
-                // mentor PIN lives in sessionStorage, which expires on tab close
-                // and is cleared whenever the login screen (/) is loaded.
-                const PIN = sessionStorage.getItem('stats_pin');
-                if (!PIN) {
-                    window.location.replace('/');
-                    throw new Error('No stats session');
-                }
+      if (!data.seasons || data.seasons.length === 0 || data.role === 'Mentor') {
+        document.getElementById('lu-hours-section').style.display = 'none';
+      } else {
+        document.getElementById('lu-hours-section').style.display = 'block';
+        var hoursHtml = '';
+        data.seasons.forEach(function(s) {
+          var pct = s.minMins > 0 ? Math.min(100, Math.round((s.actualMins / s.minMins) * 100)) : 100;
+          var fillClass = pct >= 100 ? 'fill-green' : pct >= 60 ? 'fill-yellow' : 'fill-red';
+          var progClass = pct >= 100 ? 'prog-green' : pct >= 60 ? 'prog-yellow' : 'prog-red';
+          var progLabel = pct >= 100 ? 'Goal met!' : pct + '% of goal';
+          hoursHtml += '<div class="hours-card">' +
+            '<div class="hours-label">' + esc(s.name) + '</div>' +
+            '<div class="hours-value">' + fmtMins(s.actualMins) + '</div>' +
+            '<div class="hours-sub">Goal: ' + fmtMins(s.minMins) + '</div>' +
+            '<div class="progress-bar-bg"><div class="progress-bar-fill ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
+            '<div class="progress-label ' + progClass + '">' + progLabel + '</div>' +
+            '</div>';
+        });
+        document.getElementById('lu-hours-row').innerHTML = hoursHtml;
+      }
 
-                document.getElementById('logout-btn')?.addEventListener('click', () => {
-                    sessionStorage.removeItem('stats_pin');
-                    window.location.replace('/');
-                });
+      if (!data.attendance || data.attendance.length === 0) {
+        document.getElementById('lu-attendance-section').style.display = 'none';
+      } else {
+        document.getElementById('lu-attendance-section').style.display = 'block';
+        var attHtml = '';
+        data.attendance.forEach(function(a) {
+          var pct = a.attendancePct;
+          var fillClass = pct >= a.minPct ? 'fill-green' : pct >= (a.minPct * 0.75) ? 'fill-yellow' : 'fill-red';
+          var progClass = pct >= a.minPct ? 'prog-green' : pct >= (a.minPct * 0.75) ? 'prog-yellow' : 'prog-red';
+          attHtml += '<div class="attend-row">' +
+            '<div class="attend-name">' + esc(a.seasonName) + '</div>' +
+            '<div class="attend-bar-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill ' + fillClass + '" style="width:' + Math.min(100, pct) + '%"></div></div></div>' +
+            '<div><div class="attend-pct ' + progClass + '">' + pct + '%</div><span class="attend-min">min ' + a.minPct + '%</span></div>' +
+            '</div>';
+        });
+        document.getElementById('lu-attend-card').innerHTML = attHtml;
+      }
 
-                const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      if (!data.deadlines || data.deadlines.length === 0) {
+        document.getElementById('lu-checklist-content').innerHTML = '<div class="empty-note">No checklist data yet.</div>';
+      } else {
+        var html = '';
+        data.deadlines.forEach(function(dl) {
+          html += '<div class="deadline-block">' +
+            '<div class="deadline-header">' +
+            '<div class="deadline-name">' + esc(dl.name) + '</div>' +
+            '<div class="deadline-sub">' + esc(dl.consequence) + '</div>' +
+            '</div>';
+          dl.items.forEach(function(item) {
+            var s = item.status;
+            var dv = item.displayValue || '';
+            var threshold = item.threshold;
+            var iconClass = s === 'complete' ? 'check-yes' : s === 'partial' ? 'check-partial' : s === 'na' ? 'check-na' : 'check-no';
+            var icon = s === 'complete' ? '&#10003;' : s === 'partial' ? '~' : s === 'na' ? 'N/A' : '';
+            var statusHtml = '';
+            var displayDv = formatDisplayValue(dv, threshold, item.name);
+            if (s === 'complete' && dv && dv !== 'Complete') {
+              statusHtml = '<div class="item-status status-complete">&#10003; ' + displayDv + '</div>';
+            } else if (s === 'complete') {
+              statusHtml = '<div class="item-status status-complete">&#10003; Complete</div>';
+            } else if (s === 'partial' && dv) {
+              statusHtml = '<div class="item-status status-partial">' + displayDv + '</div>';
+            } else if (s === 'partial') {
+              statusHtml = '<div class="item-status status-partial">In Progress</div>';
+            } else if (s === 'na') {
+              statusHtml = '<div class="item-status status-na">N/A</div>';
+            } else {
+              statusHtml = '<div class="item-status status-incomplete">Incomplete</div>';
+            }
+            html += '<div class="checklist-item">' +
+              '<div class="check-icon ' + iconClass + '">' + icon + '</div>' +
+              '<div class="item-content"><div class="item-name">' + esc(item.name) + '</div><div class="item-detail">' + esc(item.detail) + '</div></div>' +
+              statusHtml + '</div>';
+          });
+          html += '</div>';
+        });
+        document.getElementById('lu-checklist-content').innerHTML = html;
+      }
 
-                function fmt(num, digits) {
-                    if (typeof num !== 'number' || !isFinite(num)) {
-                        return '0';
-                    }
-                    return num.toFixed(digits);
-                }
+      if (data.captainEligibility) {
+        renderLookupCaptainEligibility(data.captainEligibility);
+      } else {
+        document.getElementById('lu-captain-section').style.display = 'none';
+      }
+    }
 
-                async function updateStats() {
-                    const timeHeader = document.getElementById('time-header');
-                    const timeBody = document.getElementById('time-body');
-                    const attnHeader = document.getElementById('attn-header');
-                    const attnBody = document.getElementById('attn-body');
-                    const overallHeader = document.getElementById('overall-header');
-                    const overallBody = document.getElementById('overall-body');
+    function renderLookupCaptainEligibility(cap) {
+      document.getElementById('lu-captain-section').style.display = 'block';
+      var overallBadge = cap.overall
+        ? '<span class="captain-eligible-badge">&#10003; Eligible</span>'
+        : '<span class="captain-ineligible-badge">Not Yet Eligible</span>';
+      var html = '<div class="captain-header">' +
+        '<div><div class="captain-title">27/28 Captain Eligibility</div>' +
+        '<div class="captain-deadline">Deadline: ' + esc(cap.deadline) + '</div></div>' +
+        overallBadge + '</div>';
+      html += '<div class="captain-table">';
+      cap.criteria.forEach(function(c) {
+        var iconClass = c.status === 'complete' ? 'cap-yes' : c.status === 'partial' ? 'cap-part' : 'cap-no';
+        var icon = c.status === 'complete' ? '&#10003;' : c.status === 'partial' ? '~' : '';
+        var statusClass = c.status === 'complete' ? 'cap-status-complete' : c.status === 'partial' ? 'cap-status-partial' : 'cap-status-incomplete';
+        var statusText = c.status === 'complete' ? '&#10003; ' + esc(c.displayValue || 'Met') :
+                         c.status === 'partial' ? esc(c.displayValue) + ' / ' + esc(c.target) :
+                         'Not Met';
+        html += '<div class="captain-row">' +
+          '<div class="cap-icon ' + iconClass + '">' + icon + '</div>' +
+          '<div class="captain-item-content">' +
+            '<div class="captain-item-name">' + esc(c.name) + '</div>' +
+            '<div class="captain-item-detail">' + esc(c.detail) + '</div>' +
+          '</div>' +
+          '<div class="captain-item-status ' + statusClass + '">' + statusText + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+      document.getElementById('lu-captain-content').innerHTML = html;
+    }
 
-                    const resp = await fetch('/stats?pin=' + encodeURIComponent(PIN));
-                    if (!resp.ok) {
-                        // PIN no longer valid / not a mentor — back to login screen.
-                        sessionStorage.removeItem('stats_pin');
-                        window.location.replace('/');
-                        return;
-                    }
-                    const res = await resp.json();
-                    const stats = res.stats;
-                    const overall = res.overall;
-                    const months = Object.keys(overall.months);
-                    console.log(res, months);
+    function formatDisplayValue(dv, threshold, itemName) {
+      if (!dv) return '';
+      var num = parseFloat(dv);
+      var name = String(itemName || '').toLowerCase();
+      if (!isNaN(num) && (name.indexOf('attendance') !== -1 || name.indexOf('meeting') !== -1)) {
+        var pctStr = Math.round(num) + '%';
+        if (threshold) return pctStr + ' / ' + Math.round(threshold) + '%';
+        return pctStr;
+      }
+      if (!isNaN(num) && (name.indexOf('hour') !== -1 || name.indexOf('volunteer') !== -1)) {
+        var hrsStr = num + ' hrs';
+        if (threshold) return hrsStr + ' / ' + threshold + ' hrs';
+        return hrsStr;
+      }
+      if (threshold) return esc(dv) + ' / ' + threshold;
+      return esc(dv);
+    }
 
-                    overallHeader.innerHTML = '<th></th>';
-                    overallHeader.innerHTML += months.map(month => `<th>${MONTHS[month]}</th>`).join('');
-                    overallHeader.innerHTML += '<th>Total</th>';
-                    overallBody.innerHTML = '';
+    function fmtMins(mins) {
+      if (!mins || mins === 0) return '0 min';
+      var h = Math.floor(mins / 60); var m = mins % 60;
+      if (h === 0) return m + ' min'; if (m === 0) return h + 'h'; return h + 'h ' + m + 'm';
+    }
 
-                    const timeRow = document.createElement('tr');
-                    timeRow.innerHTML = '<td>Hours</td>';
-                    for (const month of months) {
-                        timeRow.innerHTML += `<td>${fmt(overall.months[month].hours, 2)}</td>`;
-                    }
-                    timeRow.innerHTML += `<td>${fmt(overall.hours, 2)}</td>`;
-                    overallBody.appendChild(timeRow);
+    // ── Team Stats (unchanged data/logic from the old Materialize page,
+    // just re-skinned into the tables above) ──────────────────────────
+    const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-                    const attnRow = document.createElement('tr');
-                    attnRow.innerHTML = '<td>Attendance</td>';
-                    for (const month of months) {
-                        attnRow.innerHTML += `<td>${fmt(overall.months[month].attendance, 1)}%</td>`;
-                    }
-                    attnRow.innerHTML += `<td>${fmt(overall.attendance, 1)}%</td>`;
-                    overallBody.appendChild(attnRow);
+    function fmt(num, digits) {
+      if (typeof num !== 'number' || !isFinite(num)) return '0';
+      return num.toFixed(digits);
+    }
 
-                    const attnExcusedRow = document.createElement('tr');
-                    attnExcusedRow.innerHTML = '<td>Attendance (+Excused)</td>';
-                    for (const month of months) {
-                        attnExcusedRow.innerHTML += `<td>${fmt(overall.months[month].attendanceWithExcused, 1)}%</td>`;
-                    }
-                    attnExcusedRow.innerHTML += `<td>${fmt(overall.attendanceWithExcused, 1)}%</td>`;
-                    overallBody.appendChild(attnExcusedRow);
+    async function updateStats() {
+      const overallHeader = document.getElementById('overall-header');
+      const overallBody = document.getElementById('overall-body');
 
-                    updateTime(stats, months);
+      const resp = await fetch('/stats?pin=' + encodeURIComponent(PIN));
+      if (!resp.ok) {
+        // PIN no longer valid / not a mentor — back to login screen.
+        sessionStorage.removeItem('stats_pin');
+        window.location.replace('/');
+        return;
+      }
+      const res = await resp.json();
+      const stats = res.stats;
+      const overall = res.overall;
+      const months = Object.keys(overall.months);
 
+      overallHeader.innerHTML = '<th>Metric</th>' + months.map(month => `<th>${MONTHS[month]}</th>`).join('') + '<th>Total</th>';
+      overallBody.innerHTML = '';
 
-                    updateAttn(stats, months);
+      const timeRow = document.createElement('tr');
+      timeRow.innerHTML = '<td>Hours</td>';
+      for (const month of months) timeRow.innerHTML += `<td>${fmt(overall.months[month].hours, 2)}</td>`;
+      timeRow.innerHTML += `<td>${fmt(overall.hours, 2)}</td>`;
+      overallBody.appendChild(timeRow);
 
-                    updateTypes(stats, overall, res.sessionTypes || []);
+      const attnRow = document.createElement('tr');
+      attnRow.innerHTML = '<td>Attendance</td>';
+      for (const month of months) attnRow.innerHTML += `<td>${fmt(overall.months[month].attendance, 1)}%</td>`;
+      attnRow.innerHTML += `<td>${fmt(overall.attendance, 1)}%</td>`;
+      overallBody.appendChild(attnRow);
 
+      const attnExcusedRow = document.createElement('tr');
+      attnExcusedRow.innerHTML = '<td>Attendance (+Excused)</td>';
+      for (const month of months) attnExcusedRow.innerHTML += `<td>${fmt(overall.months[month].attendanceWithExcused, 1)}%</td>`;
+      attnExcusedRow.innerHTML += `<td>${fmt(overall.attendanceWithExcused, 1)}%</td>`;
+      overallBody.appendChild(attnExcusedRow);
 
-                    document.getElementById('attn-switch').addEventListener('change', () => {
-                        const switchState = document.getElementById('attn-switch').checked;
-                        updateAttn(stats, months, switchState);
-                    });
-                }
+      updateTime(stats, months);
+      updateAttn(stats, months);
+      updateTypes(stats, overall, res.sessionTypes || []);
 
-                function updateAttn(stats, months, excused = false) {
-                    const attnHeader = document.getElementById('attn-header');
-                    const attnBody = document.getElementById('attn-body');
+      document.getElementById('attn-switch').addEventListener('change', () => {
+        const switchState = document.getElementById('attn-switch').checked;
+        updateAttn(stats, months, switchState);
+      });
+    }
 
-                    attnHeader.innerHTML = '<th>Name</th>';
-                    attnBody.innerHTML = '';
+    function updateAttn(stats, months, excused = false) {
+      const attnHeader = document.getElementById('attn-header');
+      const attnBody = document.getElementById('attn-body');
 
-                    for (const month of months) {
-                        attnHeader.innerHTML += `<th>${month}</th>`;
-                    }
+      attnHeader.innerHTML = '<th>Name</th>';
+      attnBody.innerHTML = '';
+      for (const month of months) attnHeader.innerHTML += `<th>${month}</th>`;
+      attnHeader.innerHTML += `<th>Total</th>`;
+      stats.sort((a, b) => b[(excused) ? 'attendanceWithExcused' : 'attendance'] - a[(excused) ? 'attendanceWithExcused' : 'attendance']);
 
-                    attnHeader.innerHTML += `<th>Total</th>`;
-                    stats.sort((a, b) => b[(excused) ? 'attendanceWithExcused' : 'attendance'] - a[(excused) ? 'attendanceWithExcused' : 'attendance']);
+      for (const user of stats) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${esc(user.name)}</td>`;
+        for (const month of months) {
+          if (user.months[month]) {
+            row.innerHTML += `<td>${fmt(user.months[month][(excused) ? 'attendanceWithExcused' : 'attendance'], 1)}%</td>`;
+          } else {
+            row.innerHTML += `<td>0%</td>`;
+          }
+        }
+        row.innerHTML += `<td>${fmt(user[(excused) ? 'attendanceWithExcused' : 'attendance'], 1)}%</td>`;
+        attnBody.appendChild(row);
+      }
 
-                    for (const user of stats) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `<td>${user.name}</td>`;
-                        for (const month of months) {
-                            if (user.months[month]) {
-                                row.innerHTML += `<td>${fmt(user.months[month][(excused) ? 'attendanceWithExcused' : 'attendance'], 1)}%</td>`;
-                            } else {
-                                row.innerHTML += `<td>0%</td>`;
-                            }
-                        }
-                        row.innerHTML += `<td>${fmt(user[(excused) ? 'attendanceWithExcused' : 'attendance'], 1)}%</td>`;
-                        attnBody.appendChild(row);
-                    }
-                    
-                    for (let header of document.querySelectorAll('#attn th')) {
-                        if (header.innerText != 'Name') {
-                            header.addEventListener('click', () => {
-                                const index = Array.from(header.parentElement.children).indexOf(header);
-                                const rows = Array.from(attnBody.children);
-                                rows.sort((a, b) => {
-                                    const aHours = parseInt(a.children[index].innerText);
-                                    const bHours = parseInt(b.children[index].innerText);
-                                    return bHours - aHours;
-                                });
-                                attnBody.innerHTML = '';
-                                for (const row of rows) {
-                                    attnBody.appendChild(row);
-                                }
-                            });
-                        }
-                    }
-                }
+      for (let header of document.querySelectorAll('#attn-header th')) {
+        if (header.innerText != 'Name') {
+          header.addEventListener('click', () => {
+            const index = Array.from(header.parentElement.children).indexOf(header);
+            const rows = Array.from(attnBody.children);
+            rows.sort((a, b) => {
+              const aHours = parseInt(a.children[index].innerText);
+              const bHours = parseInt(b.children[index].innerText);
+              return bHours - aHours;
+            });
+            attnBody.innerHTML = '';
+            for (const row of rows) attnBody.appendChild(row);
+          });
+        }
+      }
+    }
 
-                function updateTime(stats, months) {
-                    const timeHeader = document.getElementById('time-header');
-                    const timeBody = document.getElementById('time-body');
+    function updateTime(stats, months) {
+      const timeHeader = document.getElementById('time-header');
+      const timeBody = document.getElementById('time-body');
 
-                    for (const month of months) {
-                        timeHeader.innerHTML += `<th>${month}</th>`;
-                    }
+      for (const month of months) timeHeader.innerHTML += `<th>${month}</th>`;
+      timeHeader.innerHTML += `<th>Total</th>`;
+      stats.sort((a, b) => b.hours - a.hours);
 
-                    timeHeader.innerHTML += `<th>Total</th>`;
+      for (const user of stats) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${esc(user.name)}</td>`;
+        for (const month of months) {
+          if (user.months[month]) {
+            row.innerHTML += `<td>${fmt(user.months[month].hours, 2)}</td>`;
+          } else {
+            row.innerHTML += `<td>0</td>`;
+          }
+        }
+        row.innerHTML += `<td>${fmt(user.hours, 2)}</td>`;
+        timeBody.appendChild(row);
+      }
 
-                    stats.sort((a, b) => b.hours - a.hours);
+      for (let header of document.querySelectorAll('#time-header th')) {
+        if (header.innerText != 'Name') {
+          header.addEventListener('click', () => {
+            const index = Array.from(header.parentElement.children).indexOf(header);
+            const rows = Array.from(timeBody.children);
+            rows.sort((a, b) => {
+              const aHours = parseFloat(a.children[index].innerText);
+              const bHours = parseFloat(b.children[index].innerText);
+              return bHours - aHours;
+            });
+            timeBody.innerHTML = '';
+            for (const row of rows) timeBody.appendChild(row);
+          });
+        }
+      }
+    }
 
-                    for (const user of stats) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `<td>${user.name}</td>`;
-                        for (const month of months) {
-                            if (user.months[month]) {
-                                row.innerHTML += `<td>${fmt(user.months[month].hours, 2)}</td>`;
-                            } else {
-                                row.innerHTML += `<td>0</td>`;
-                            }
-                        }
-                        row.innerHTML += `<td>${fmt(user.hours, 2)}</td>`;
-                        timeBody.appendChild(row);
-                    }
-                    
-                    for (let header of document.querySelectorAll('#time th')) {
-                        if (header.innerText != 'Name') {
-                            header.addEventListener('click', () => {
-                                const index = Array.from(header.parentElement.children).indexOf(header);
-                                const rows = Array.from(timeBody.children);
-                                rows.sort((a, b) => {
-                                    const aHours = parseFloat(a.children[index].innerText);
-                                    const bHours = parseFloat(b.children[index].innerText);
-                                    return bHours - aHours;
-                                });
-                                timeBody.innerHTML = '';
-                                for (const row of rows) {
-                                    timeBody.appendChild(row);
-                                }
-                            });
-                        }
-                    }
-                }
+    function sumByType(bt) {
+      if (!bt) return 0;
+      return Object.values(bt).reduce((a, b) => a + b, 0);
+    }
 
-                function sumByType(bt) {
-                    if (!bt) return 0;
-                    return Object.values(bt).reduce((a, b) => a + b, 0);
-                }
+    function updateTypes(stats, overall, sessionTypes) {
+      const header = document.getElementById('types-header');
+      const body = document.getElementById('types-body');
 
-                function updateTypes(stats, overall, sessionTypes) {
-                    const header = document.getElementById('types-header');
-                    const body = document.getElementById('types-body');
+      header.innerHTML = '<th>Name</th>' + sessionTypes.map(t => `<th>${t}</th>`).join('') + '<th>Total</th>';
+      body.innerHTML = '';
 
-                    header.innerHTML = '<th>Name</th>'
-                        + sessionTypes.map(t => `<th>${t}</th>`).join('')
-                        + '<th>Total</th>';
-                    body.innerHTML = '';
+      const overallRow = document.createElement('tr');
+      let oTotal = 0;
+      overallRow.innerHTML = '<td><strong>Overall</strong></td>' + sessionTypes.map(t => {
+        const v = (overall.byType && overall.byType[t]) || 0;
+        oTotal += v;
+        return `<td>${fmt(v, 2)}</td>`;
+      }).join('') + `<td>${fmt(oTotal, 2)}</td>`;
+      body.appendChild(overallRow);
 
-                    const overallRow = document.createElement('tr');
-                    let oTotal = 0;
-                    overallRow.innerHTML = '<td><strong>Overall</strong></td>'
-                        + sessionTypes.map(t => {
-                            const v = (overall.byType && overall.byType[t]) || 0;
-                            oTotal += v;
-                            return `<td>${fmt(v, 2)}</td>`;
-                        }).join('')
-                        + `<td>${fmt(oTotal, 2)}</td>`;
-                    body.appendChild(overallRow);
+      const sorted = stats.slice().sort((a, b) => sumByType(b.byType) - sumByType(a.byType));
+      for (const user of sorted) {
+        const row = document.createElement('tr');
+        let total = 0;
+        row.innerHTML = `<td>${esc(user.name)}</td>` + sessionTypes.map(t => {
+          const v = (user.byType && user.byType[t]) || 0;
+          total += v;
+          return `<td>${fmt(v, 2)}</td>`;
+        }).join('') + `<td>${fmt(total, 2)}</td>`;
+        body.appendChild(row);
+      }
+    }
 
-                    const sorted = stats.slice().sort((a, b) => sumByType(b.byType) - sumByType(a.byType));
-                    for (const user of sorted) {
-                        const row = document.createElement('tr');
-                        let total = 0;
-                        row.innerHTML = `<td>${user.name}</td>`
-                            + sessionTypes.map(t => {
-                                const v = (user.byType && user.byType[t]) || 0;
-                                total += v;
-                                return `<td>${fmt(v, 2)}</td>`;
-                            }).join('')
-                            + `<td>${fmt(total, 2)}</td>`;
-                        body.appendChild(row);
-                    }
-                }
-
-                updateStats();
-            </script>
-    </body>
+    loadRoster();
+    setInterval(loadRoster, 30000);
+    updateStats();
+  </script>
+</body>
 </html>
