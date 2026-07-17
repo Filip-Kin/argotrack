@@ -17,7 +17,7 @@ jobs:
       - name: Build and push image
         run: |
           IMG=git.filipkin.com/filip/argotrack
-          docker build -t "$IMG:argotrack" -t "$IMG:${{ github.sha }}" .
+          docker build --build-arg GIT_SHA=${{ github.sha }} -t "$IMG:argotrack" -t "$IMG:${{ github.sha }}" .
           docker push "$IMG:argotrack"
           docker push "$IMG:${{ github.sha }}"
 

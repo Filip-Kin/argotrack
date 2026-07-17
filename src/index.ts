@@ -223,6 +223,13 @@ app.get('/mentor/roster', async (req: Request, res: Response) => {
     }
 });
 
+// Which commit is actually running. Baked in at build time (Dockerfile ARG
+// GIT_SHA). Lets a client poll after a push to see when their change is live.
+const GIT_SHA = process.env.GIT_SHA || 'unknown';
+app.get('/version', (_req: Request, res: Response) => {
+    res.json({ commit: GIT_SHA, uptimeSeconds: Math.round(process.uptime()) });
+});
+
 // ─────────────────────────────────────────────────────────────
 // Health check — the proper replacement for the old "restart every 24h" cron.
 // Coolify hits this; if the sheet connection is wedged it returns 503 and the

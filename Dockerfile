@@ -15,6 +15,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl wget \
     && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
+# The commit this image was built from, surfaced at /version so the running app
+# can report exactly what's deployed (CI passes --build-arg GIT_SHA=<commit>).
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
