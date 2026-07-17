@@ -316,6 +316,11 @@
 				rd.style.display = 'inline-block';
 				rd.textContent = 'Session: ' + formatDuration(data.duration);
 			}
+		} else if (data.event === 'SIGNOUT_ALL') {
+			rc.className = 'card result-card signout_all';
+			rn.className = 'result-name signout_all';
+			rn.textContent = 'All Signed Out';
+			rm.textContent = data.message;
 		}
 
 		refreshSignedIn();

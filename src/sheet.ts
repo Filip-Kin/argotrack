@@ -303,7 +303,7 @@ async function addHoursForDay(pin: string, hours: number, fname = '', lname = ''
     // Make sure this pin has a Log row (a member added after startup won't yet).
     const logRows = await logSheet!.getRows();
     const hasRow = logRows.some(
-        (r) => String(r.get('pin') ?? r['_rawData']?.[0]) === String(pin)
+        (r) => String(r.get('pin') ?? r['_rawData']?.[0]).trim() === String(pin).trim()
     );
     if (!hasRow) await logSheet!.addRow({ pin, fname, lname });
 
@@ -312,7 +312,7 @@ async function addHoursForDay(pin: string, hours: number, fname = '', lname = ''
 
     let row = -1;
     for (let i = 1; i < logSheet!.rowCount; i++) {
-        if (String(logSheet!.getCell(i, 0).value) === String(pin)) {
+        if (String(logSheet!.getCell(i, 0).value).trim() === String(pin).trim()) {
             row = i;
             break;
         }
@@ -331,7 +331,7 @@ async function addHoursForDay(pin: string, hours: number, fname = '', lname = ''
 export async function getUserFromPin(pin: string) {
     return withReconnect(async () => {
         const rows = await usersSheet!.getRows<UsersRowData>();
-        return rows.find((r) => String(r.get('pin')) === String(pin));
+        return rows.find((r) => String(r.get('pin')).trim() === String(pin).trim());
     });
 }
 
@@ -348,21 +348,45 @@ export type PunchResult =
           total?: number;
       };
 
+// Old Apps Script version treated any open IN older than this as stale rather
+// than a real session, so a forgotten sign-out doesn't bill someone for days.
+const STALE_SESSION_MS = 24 * 60 * 60 * 1000;
+
+// GAS ran each request to completion before the next one started, so two taps
+// of the same PIN could never interleave. This async server can await mid-punch,
+// so a double-tap (or a client retry) could otherwise read the same starting
+// state twice and both write, dropping one of the two updates. Serialize
+// punches per-pin to close that window; different pins still run concurrently.
+const pinLocks = new Map<string, Promise<unknown>>();
+function withPinLock<T>(pin: string, fn: () => Promise<T>): Promise<T> {
+    const prior = pinLocks.get(pin) ?? Promise.resolve();
+    const run = prior.then(fn, fn);
+    pinLocks.set(pin, run.catch(() => {}));
+    return run;
+}
+
 /** Toggle a user in/out. Records a raw Sessions row and, on OUT, per-day hours. */
 export async function punch(pin: string, sessionType?: string, eventName?: string): Promise<PunchResult> {
     // Connection may reconnect once, but the toggle itself runs exactly once —
     // retrying a mutation would double-flip loggedin.
     await ensureConnected();
 
+    return withPinLock(pin, () => punchLocked(pin, sessionType, eventName));
+}
+
+async function punchLocked(pin: string, sessionType?: string, eventName?: string): Promise<PunchResult> {
     {
         const rows = await usersSheet!.getRows<UsersRowData>();
-        const user = rows.find((r) => String(r.get('pin')) === String(pin));
+        const user = rows.find((r) => String(r.get('pin')).trim() === String(pin).trim());
         if (!user) return { success: false, message: 'PIN not found' };
 
         const now = getNow();
         const name = `${user.get('fname')} ${user.get('lname')}`.trim();
         const type = user.get('type') || 'STUDENT';
-        const isIn = String(user.get('loggedin')).toUpperCase() === 'TRUE';
+        const loggedInFlag = String(user.get('loggedin')).toUpperCase() === 'TRUE';
+        const loginAt = loggedInFlag ? new Date(user.get('login')) : null;
+        const isStale = loggedInFlag && (!loginAt || isNaN(loginAt.getTime()) || now.getTime() - loginAt.getTime() >= STALE_SESSION_MS);
+        const isIn = loggedInFlag && !isStale;
 
         if (!isIn) {
             // Sign IN
@@ -645,6 +669,26 @@ function ymd(d: Date): string {
     return `${y}-${m}-${day}`;
 }
 
+// Thresholds for the checklist's numeric requirements, from the Checklist tab's
+// own "Details" column text (which varies by student type, so can't be read as
+// a single sheet cell): Volunteer Hours "15 hrs rookies / 30 hrs veterans / 40
+// hrs captain eligibility", Fall Meeting Attendance "New: 80% | Returning: 60%
+// | Captains: 80%", Build Season Attendance "New: 50% | Returning: 60% |
+// Captains: 75%".
+function checklistThreshold(itemName: string, studentType: string): number | null {
+    const n = itemName.toLowerCase();
+    if (n.includes('volunteer') && n.includes('hour')) {
+        return studentType === 'New' ? 15 : studentType === 'Captain' ? 40 : 30;
+    }
+    if (n.includes('fall') && (n.includes('attendance') || n.includes('meeting'))) {
+        return studentType === 'Captain' ? 80 : studentType === 'New' ? 80 : 60;
+    }
+    if (n.includes('build') && n.includes('attendance')) {
+        return studentType === 'Captain' ? 75 : studentType === 'New' ? 50 : 60;
+    }
+    return null;
+}
+
 /** Map a raw checklist cell to a status + display value (ported verbatim). */
 function parseStatusValue(raw: string, threshold: number | null): { status: string; displayValue: string } {
     const lower = String(raw || '').toLowerCase().trim();
@@ -785,13 +829,13 @@ export async function getReport(startDate: string, endDate: string) {
         const allDays = new Set<string>();
         for (const e of outs) {
             if (e.date < start || e.date > end) continue;
-            allDays.add(e.date.toDateString());
+            allDays.add(localDateString(e.date));
             const s = map.get(e.pin);
             if (!s) continue;
             const mins = e.hours * 60;
             s.totalMins += mins;
             s.sessions += 1;
-            s.days.add(e.date.toDateString());
+            s.days.add(localDateString(e.date));
             if (s.byType[e.sessionType] === undefined) s.byType[e.sessionType] = 0;
             s.byType[e.sessionType] += mins;
         }
@@ -840,7 +884,7 @@ export async function getChecklistOverview() {
             const statuses: string[] = [];
             for (const it of cl.items) {
                 const raw = String(cl.grid[rowIdx]?.[it.col] ?? '').trim();
-                const st = parseStatusValue(raw, null).status;
+                const st = parseStatusValue(raw, checklistThreshold(it.name, info.studentType)).status;
                 if (st === 'complete') complete++;
                 else if (st === 'na') na++;
                 else if (st === 'partial') partial++;
@@ -894,12 +938,12 @@ function computeCaptainEligibility(
             let totalDays = helperDays[s.name] || 0;
             if (totalDays === 0) {
                 const allDays = new Set<string>();
-                for (const e of outs) if (e.date >= s.start && e.date <= s.end) allDays.add(e.date.toDateString());
+                for (const e of outs) if (e.date >= s.start && e.date <= s.end) allDays.add(localDateString(e.date));
                 totalDays = allDays.size;
             }
             if (totalDays === 0) continue;
             const myDays = new Set<string>();
-            for (const e of mine) if (e.date >= s.start && e.date <= s.end) myDays.add(e.date.toDateString());
+            for (const e of mine) if (e.date >= s.start && e.date <= s.end) myDays.add(localDateString(e.date));
             const pctC = Math.round((myDays.size / totalDays) * 100);
             if (nm.includes('fall') && fallAttPct === 0) fallAttPct = pctC;
             if (nm.includes('build') && buildAttPct === 0) buildAttPct = pctC;
@@ -963,8 +1007,8 @@ export async function getStudentPortal(pin: string) {
             const allDays = new Set<string>();
             for (const e of outs) {
                 if (e.date < s.start || e.date > s.end) continue;
-                allDays.add(e.date.toDateString());
-                if (e.pin === pin) myDays.add(e.date.toDateString());
+                allDays.add(localDateString(e.date));
+                if (e.pin === pin) myDays.add(localDateString(e.date));
             }
             let totalDays = helperDays[s.name] || 0;
             if (totalDays === 0) totalDays = allDays.size;
@@ -980,8 +1024,9 @@ export async function getStudentPortal(pin: string) {
             consequence: dl.consequence,
             items: dl.items.map((it) => {
                 const raw = rowIdx !== undefined ? String(cl.grid[rowIdx]?.[it.col] ?? '').trim() : '';
-                const parsed = parseStatusValue(raw, null);
-                return { name: it.name, detail: it.detail, status: parsed.status, displayValue: parsed.displayValue, threshold: null };
+                const threshold = checklistThreshold(it.name, studentType);
+                const parsed = parseStatusValue(raw, threshold);
+                return { name: it.name, detail: it.detail, status: parsed.status, displayValue: parsed.displayValue, threshold };
             }),
         }));
 
@@ -1010,7 +1055,7 @@ export async function signOutAll(): Promise<{ count: number; names: string[] }> 
     const names: string[] = [];
     for (const user of rows) {
         if (String(user.get('loggedin')).toUpperCase() !== 'TRUE') continue;
-        const pin = String(user.get('pin'));
+        const pin = String(user.get('pin')).trim();
         const loginAt = new Date(user.get('login'));
         const hours = Math.max(0, (now.getTime() - loginAt.getTime()) / 36e5);
         const total = parseFloat(String(user.get('total')) || '0') + hours;
