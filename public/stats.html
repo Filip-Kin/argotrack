@@ -657,7 +657,7 @@
 
       attnHeader.innerHTML = '<th>Name</th>';
       attnBody.innerHTML = '';
-      for (const month of months) attnHeader.innerHTML += `<th>${month}</th>`;
+      for (const month of months) attnHeader.innerHTML += `<th>${MONTHS[month]}</th>`;
       attnHeader.innerHTML += `<th>Total</th>`;
       stats.sort((a, b) => b[(excused) ? 'attendanceWithExcused' : 'attendance'] - a[(excused) ? 'attendanceWithExcused' : 'attendance']);
 
@@ -696,7 +696,7 @@
       const timeHeader = document.getElementById('time-header');
       const timeBody = document.getElementById('time-body');
 
-      for (const month of months) timeHeader.innerHTML += `<th>${month}</th>`;
+      for (const month of months) timeHeader.innerHTML += `<th>${MONTHS[month]}</th>`;
       timeHeader.innerHTML += `<th>Total</th>`;
       stats.sort((a, b) => b.hours - a.hours);
 
