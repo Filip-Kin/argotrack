@@ -218,8 +218,8 @@
       el.classList.add("show");
     }
 
-    function loadPortal() {
-      var pin = document.getElementById("pin-input").value.trim();
+    function loadPortal(autoPin) {
+      var pin = autoPin || document.getElementById("pin-input").value.trim();
       if (pin.length !== 4) { showError("Please enter your 4-digit PIN."); return; }
       var btn = document.getElementById("login-btn");
       btn.innerHTML = "<span class=\"spinner\"></span>Loading...";
@@ -227,7 +227,12 @@
       post({ action: "getStudentPortal", pin: pin })
       .then(function(data) {
         btn.innerHTML = "View My Progress"; btn.disabled = false;
-        if (!data.success) { showError(data.message || "PIN not found."); return; }
+        if (!data.success) {
+          sessionStorage.removeItem("portal_pin");
+          showError(data.message || "PIN not found.");
+          return;
+        }
+        sessionStorage.setItem("portal_pin", pin);
         renderPortal(data);
       })
       .catch(function(err) {
@@ -386,6 +391,7 @@
     }
 
     function logout() {
+      sessionStorage.removeItem("portal_pin");
       document.getElementById("pin-input").value = "";
       document.getElementById("login-error").classList.remove("show");
       document.getElementById("login-wrap").style.display = "flex";
@@ -422,6 +428,10 @@
     function esc(s) {
       return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
+
+    // Arriving from the kiosk's portal-login handoff: skip re-typing the PIN.
+    var handoffPin = sessionStorage.getItem("portal_pin");
+    if (handoffPin) loadPortal(handoffPin);
   </script>
 </body>
 </html>

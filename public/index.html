@@ -90,7 +90,7 @@
 <body>
 <div class="page">
 	<div class="left-col">
-		<div class="logo-bar" onclick="enterLoginMode()" title="Mentor login">
+		<div class="logo-bar" onclick="enterLoginMode()" title="Student / mentor portal login">
 			<img class="logo-img" src="/logo.png" alt="Argonauts Logo" onerror="this.style.display='none'" />
 			<div class="logo-text">Argonauts Tracker</div>
 			<div class="logo-sub">Attendance</div>
@@ -157,8 +157,9 @@
 </div>
 
 <script>
-	// Returning to the login screen (this page) expires any mentor stats session.
+	// Returning to the login screen (this page) expires any portal/stats session.
 	sessionStorage.removeItem('stats_pin');
+	sessionStorage.removeItem('portal_pin');
 
 	var pin = '';
 	var MAX_PIN = 6;
@@ -212,11 +213,11 @@
 	refreshSignedIn();
 	setInterval(refreshSignedIn, 30000);
 
-	// ── mode switching (kiosk sign-in  <->  mentor login) ──
+	// ── mode switching (kiosk sign-in  <->  portal login) ──
 	function applyMode() {
 		var login = mode === 'login';
-		document.getElementById('card-title').textContent = login ? 'Mentor Login' : 'Enter Your PIN';
-		document.getElementById('card-subtitle').textContent = login ? 'Enter mentor PIN to view stats' : 'Student ID to sign in or out';
+		document.getElementById('card-title').textContent = login ? 'Portal Login' : 'Enter Your PIN';
+		document.getElementById('card-subtitle').textContent = login ? 'Enter your PIN to view your portal' : 'Student ID to sign in or out';
 		document.getElementById('session-row').classList.toggle('hidden', login);
 		document.getElementById('submit-btn').textContent = login ? 'Log In' : 'Check In / Out';
 		document.getElementById('login-back').classList.toggle('hidden', !login);
@@ -249,7 +250,7 @@
 
 	function submitPin() {
 		if (pin.length < 3) return;
-		if (mode === 'login') return mentorLogin();
+		if (mode === 'login') return portalLogin();
 		var sessionType = document.getElementById('session-type').value;
 		var eventName = document.getElementById('event-name').value.trim();
 		var btn = document.getElementById('submit-btn');
@@ -260,17 +261,24 @@
 			.catch(function () { showResult({ success: false, message: 'Connection error. Try again.' }); });
 	}
 
-	function mentorLogin() {
+	// A single PIN box for both mentors and students: /portal already reports
+	// which one it is, so route to the matching page instead of asking upfront.
+	function portalLogin() {
 		var enteredPin = pin;
 		var btn = document.getElementById('submit-btn');
 		btn.disabled = true;
 		btn.innerHTML = '<span class="spinner"></span>Checking...';
-		fetch('/stats?pin=' + encodeURIComponent(enteredPin)).then(function (r) {
-			if (r.ok) {
+		api('/portal', { pin: enteredPin }).then(function (data) {
+			if (!data.success) {
+				showResult({ success: false, message: data.message || 'PIN not found.' });
+				return;
+			}
+			if (data.role === 'Mentor') {
 				sessionStorage.setItem('stats_pin', enteredPin);
 				window.location.href = '/stats.html';
 			} else {
-				showResult({ success: false, message: 'Not a mentor PIN.' });
+				sessionStorage.setItem('portal_pin', enteredPin);
+				window.location.href = '/portal.html';
 			}
 		}).catch(function () {
 			showResult({ success: false, message: 'Connection error. Try again.' });
