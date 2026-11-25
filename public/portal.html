@@ -487,10 +487,7 @@
       volPin = "";
       volData = null;
       document.getElementById("vol-overlay").classList.remove("show");
-      document.getElementById("pin-input").value = "";
-      document.getElementById("login-error").classList.remove("show");
-      document.getElementById("login-wrap").style.display = "flex";
-      document.getElementById("portal").style.display = "none";
+      window.location.replace("/");
     }
 
     function fmtMins(mins) {
