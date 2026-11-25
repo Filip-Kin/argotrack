@@ -1,8 +1,10 @@
 import express, { Express, Request, Response } from 'express';
 import {
-    connect, getStats, getSignedIn, getUserFromPin, healthPing, punch,
+    connect, getStats, getSignedIn, getMember, healthPing, punch,
     getStudentPortal, getReport, getRoster, getSeasons, getChecklistOverview, signOutAll, signOutOne,
+    getRolloverStatus, rolloverYear,
 } from './sheet';
+import { getVolunteerEvents, getVolunteerRoster, volunteerCancel, volunteerSignUp } from './volunteer';
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
@@ -30,8 +32,8 @@ async function requireMentor(req: Request, res: Response): Promise<boolean> {
         res.status(401).json({ success: false, message: 'Mentor PIN required.' });
         return false;
     }
-    const user = await getUserFromPin(mentorPin);
-    if (!user || (user.get('type') || '').toUpperCase() !== 'MENTOR') {
+    const member = await getMember(mentorPin);
+    if (!member || member.role !== 'Mentor') {
         res.status(403).json({ success: false, message: 'Not a mentor PIN.' });
         return false;
     }
@@ -56,7 +58,14 @@ process.on('uncaughtException', (err) => {
 // Kick off the first connection (non-fatal if it fails; requests will retry).
 connect().catch((e) => console.error('[startup connect failed]', e?.message || e));
 
+// Behind the Coolify proxy, so the client address comes from X-Forwarded-For.
+app.set('trust proxy', true);
+
 app.use(express.static('./public'));
+
+function errorText(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 // ─────────────────────────────────────────────────────────────
 // Punch in/out.  /punch is the canonical name; /login kept as an alias so the
@@ -80,7 +89,7 @@ async function handlePunch(req: Request, res: Response) {
         const sessionType = req.query.sessionType ? String(req.query.sessionType) : undefined;
         const eventName = req.query.eventName ? String(req.query.eventName) : undefined;
 
-        const result = await punch(pin, sessionType, eventName);
+        const result = await punch(pin, sessionType, eventName, (req.ip || '').replace(/^::ffff:/, ''));
         if (!result.success) return res.status(404).json(result);
 
         // Back-compat field for the old frontend, which read `msg`.
@@ -110,11 +119,9 @@ app.get('/stats', async (req: Request, res: Response) => {
         const pin = req.query.pin as string | undefined;
         if (!pin) return res.status(401).json({ error: 'PIN required' });
 
-        const user = await getUserFromPin(pin);
-        if (!user) return res.status(403).json({ error: 'Invalid PIN' });
-        if ((user.get('type') || '').toUpperCase() !== 'MENTOR') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        const member = await getMember(pin);
+        if (!member) return res.status(403).json({ error: 'Invalid PIN' });
+        if (member.role !== 'Mentor') return res.status(403).json({ error: 'Access denied' });
 
         return res.json(await getStats());
     } catch (e: any) {
@@ -223,9 +230,71 @@ app.get('/mentor/roster', async (req: Request, res: Response) => {
     }
 });
 
-// Which commit is actually running. Baked in at build time (Dockerfile ARG
-// GIT_SHA). Lets a client poll after a push to see when their change is live.
-const GIT_SHA = process.env.GIT_SHA || 'unknown';
+// Year rollover (coach dashboard): archive Checklist / Summary / Log, clear the
+// Checklist statuses, promote New students to Veteran.
+app.get('/rollover/status', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await getRolloverStatus());
+    } catch (e) {
+        console.error('[rollover/status error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+app.get('/rollover', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await rolloverYear());
+    } catch (e) {
+        console.error('[rollover error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Volunteer sign-ups. Students use their own PIN; the roster view is coach-only.
+app.get('/volunteer/events', async (req: Request, res: Response) => {
+    try {
+        return res.json(await getVolunteerEvents(req.query.pin));
+    } catch (e) {
+        console.error('[volunteer/events error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error. Try again.' });
+    }
+});
+app.get('/volunteer/signup', async (req: Request, res: Response) => {
+    try {
+        const q = req.query;
+        return res.json(await volunteerSignUp({
+            pin: q.pin, slotId: q.slotId, signStudent: q.signStudent,
+            parentName: q.parentName, parentEmail: q.parentEmail, studentEmail: q.studentEmail, note: q.note,
+        }));
+    } catch (e) {
+        console.error('[volunteer/signup error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error. Try again.' });
+    }
+});
+app.get('/volunteer/cancel', async (req: Request, res: Response) => {
+    try {
+        return res.json(await volunteerCancel(req.query.pin, req.query.signupId));
+    } catch (e) {
+        console.error('[volunteer/cancel error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error. Try again.' });
+    }
+});
+app.get('/volunteer/roster', async (req: Request, res: Response) => {
+    if (!requireCoach(req, res)) return;
+    try {
+        return res.json(await getVolunteerRoster(req.query.eventId));
+    } catch (e) {
+        console.error('[volunteer/roster error]', errorText(e));
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Which commit is actually running. Coolify sets SOURCE_COMMIT in the container;
+// GIT_SHA is the Dockerfile build arg for builds made outside Coolify. Lets a
+// client poll after a push to see when their change is live.
+const BUILD_SHA = process.env.GIT_SHA && process.env.GIT_SHA !== 'unknown' ? process.env.GIT_SHA : '';
+const GIT_SHA = BUILD_SHA || process.env.SOURCE_COMMIT || 'unknown';
 app.get('/version', (_req: Request, res: Response) => {
     res.json({ commit: GIT_SHA, uptimeSeconds: Math.round(process.uptime()) });
 });

@@ -114,6 +114,54 @@
     .cap-status-complete   { background: #4caf50; color: #fff; }
     .cap-status-partial    { background: #f5a623; color: #000; }
     .cap-status-incomplete { background: transparent; color: #e53935; border: 2px solid #e53935; }
+    /* VOLUNTEER */
+    .vol-promo { background: #000; border-left: 8px solid #8b0000; border-radius: 12px; padding: clamp(16px,2.4vw,22px) clamp(18px,2.6vw,26px); margin-bottom: 2vh; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .vol-promo-title { font-size: clamp(16px,2.4vw,20px); font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .vol-promo-text { font-size: clamp(13px,1.8vw,15px); font-weight: 600; color: rgba(255,255,255,0.85); line-height: 1.5; max-width: 520px; }
+    .vol-promo-count { display: inline-block; margin-top: 8px; background: #b8860b; color: #000; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+    .vol-btn { background: #c62828; color: #fff; border: 2px solid #fff; border-radius: 10px; padding: 14px 22px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; font-family: "Montserrat", sans-serif; white-space: nowrap; }
+    .vol-btn:hover { background: #e53935; }
+    @media (max-width: 560px) { .vol-btn { width: 100%; white-space: normal; } }
+    .vol-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #b8860b; overflow-y: auto; z-index: 50; padding: 3vh 4vw; }
+    .vol-overlay.show { display: block; }
+    .vol-wrap { max-width: 800px; margin: 0 auto; }
+    .vol-head { background: #000; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 2vh; }
+    .vol-title { font-size: clamp(16px,3vw,22px); font-weight: 700; color: #b8860b; text-transform: uppercase; letter-spacing: 1px; }
+    .vol-card { background: #000; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; color: #fff; }
+    .vol-card.clickable { cursor: pointer; border: 2px solid transparent; }
+    .vol-card.clickable:hover { border-color: #b8860b; }
+    .vol-ev-name { font-size: 16px; font-weight: 700; color: #b8860b; margin-bottom: 4px; }
+    .vol-ev-meta { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); line-height: 1.6; }
+    .vol-chip { display: inline-block; background: #b8860b; color: #000; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; margin-right: 6px; margin-top: 6px; }
+    .vol-chip.warn { background: #8b0000; color: #fff; }
+    .vol-chip.ok { background: #4caf50; color: #fff; }
+    .vol-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+    .vol-slot { background: #000; border: 2px solid #000; border-radius: 10px; padding: 14px; }
+    .vol-slot.full { border: 2px dashed #777; opacity: 0.8; }
+    .vol-slot-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .vol-slot-time { font-size: 12px; font-weight: 600; color: #b8860b; margin-top: 2px; }
+    .vol-slot-spots { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.8); margin-top: 8px; }
+    .vol-slot-names { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.6); margin-top: 6px; line-height: 1.5; }
+    .vol-small-btn { background: #c62828; color: #fff; border: 2px solid #fff; border-radius: 7px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; }
+    .vol-small-btn:hover { background: #e53935; }
+    .vol-small-btn:disabled { background: #444; color: #aaa; border-color: #666; cursor: not-allowed; }
+    .vol-small-btn.red { background: transparent; color: #ff8a80; border: 2px solid #e53935; padding: 6px 12px; margin-top: 6px; font-size: 11px; }
+    .vol-small-btn.red:hover { background: rgba(229,57,53,0.2); }
+    .vol-back { background: #000; border: 2px solid #b8860b; color: #b8860b; border-radius: 7px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: "Montserrat", sans-serif; }
+    .vol-back:hover { background: #1a1a1a; }
+    .vol-times { font-size: 12px; font-weight: 600; color: #b8860b; line-height: 1.6; margin-top: 4px; }
+    .vol-mine-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; font-weight: 600; }
+    .vol-mine-row:last-child { border-bottom: none; }
+    .vol-form-box { background: #000; border: 3px solid #b8860b; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; color: #fff; }
+    .vol-form-box label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 4px; color: #fff; }
+    .vol-form-box input[type=text], .vol-form-box input[type=email] { width: 100%; padding: 11px 12px; background: #fff; border: 2px solid #b8860b; border-radius: 8px; font-size: 15px; font-family: "Montserrat", sans-serif; font-weight: 600; color: #000; }
+    .vol-check { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; margin: 8px 0; }
+    .vol-check input { width: 20px; height: 20px; accent-color: #b8860b; }
+    .vol-msg { font-size: 13px; font-weight: 700; margin-top: 10px; padding: 8px 12px; border-radius: 6px; display: none; }
+    .vol-msg.err { display: block; background: rgba(229,57,53,0.18); color: #ff8a80; }
+    .vol-msg.good { display: block; background: rgba(76,175,80,0.2); color: #8be28f; }
+    .vol-note { font-size: 12px; font-weight: 600; color: #1a0f00; margin-top: 10px; line-height: 1.5; }
+    .vol-link { color: #b8860b; font-weight: 700; font-size: 12px; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -172,6 +220,15 @@
       </div>
     </div>
 
+    <div class="vol-promo">
+      <div>
+        <div class="vol-promo-title">Volunteer Opportunities</div>
+        <div class="vol-promo-text">Help support the team! See upcoming events and sign up yourself and your parents or guardians.</div>
+        <div class="vol-promo-count" id="vol-count" style="display:none"></div>
+      </div>
+      <button class="vol-btn" id="vol-open-btn">View Opportunities &amp; Sign Up</button>
+    </div>
+
     <div id="hours-section">
       <div class="section-label">Hours Progress</div>
       <div class="hours-row" id="hours-row"></div>
@@ -191,6 +248,17 @@
     </div>
   </div>
 
+  <div class="vol-overlay" id="vol-overlay">
+    <div class="vol-wrap">
+      <div class="vol-head">
+        <div class="vol-title">Volunteer Opportunities</div>
+        <button class="vol-back" id="vol-close-btn">&#8592; Back to My Progress</button>
+      </div>
+      <div id="vol-body"></div>
+    </div>
+  </div>
+
+
   <script>
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoUfAZgkXad7AL6JGu5n9XLozdPGnKlV7YdsyDRKpNoMaI49yIPN1wlZrBeAc9s2kn/exec";
 
@@ -201,7 +269,12 @@
     document.getElementById("logout-btn").addEventListener("click", logout);
 
     // argotrack exposes /portal?pin= rather than the Apps Script ?action= URL.
-    var ACTION_ROUTES = { getStudentPortal: "/portal" };
+    var ACTION_ROUTES = {
+      getStudentPortal: "/portal",
+      getVolunteerEvents: "/volunteer/events",
+      volunteerSignUp: "/volunteer/signup",
+      volunteerCancel: "/volunteer/cancel"
+    };
     function post(params) {
       var path = ACTION_ROUTES[params.action] || ("/" + params.action);
       var qs = Object.keys(params).filter(function(k) { return k !== "action"; }).map(function(k) {
@@ -219,8 +292,8 @@
     }
 
     function loadPortal(autoPin) {
-      var pin = autoPin || document.getElementById("pin-input").value.trim();
-      if (pin.length !== 4) { showError("Please enter your 4-digit PIN."); return; }
+      var pin = (typeof autoPin === "string" && autoPin) || document.getElementById("pin-input").value.trim();
+      if (!/^[0-9]{4}$/.test(pin)) { showError("Please enter your 4-digit PIN (numbers only)."); return; }
       var btn = document.getElementById("login-btn");
       btn.innerHTML = "<span class=\"spinner\"></span>Loading...";
       btn.disabled = true;
@@ -233,7 +306,9 @@
           return;
         }
         sessionStorage.setItem("portal_pin", pin);
+        volPin = pin;
         renderPortal(data);
+        volPreviewCount();
       })
       .catch(function(err) {
         btn.innerHTML = "View My Progress"; btn.disabled = false;
@@ -277,16 +352,30 @@
       } else {
         var hoursHtml = "";
         data.seasons.forEach(function(s) {
-          var pct = s.minMins > 0 ? Math.min(100, Math.round((s.actualMins / s.minMins) * 100)) : 100;
+          var att = null;
+          (data.attendance || []).forEach(function(a) { if (a.seasonName === s.name) att = a; });
+          var pct, progLabel, subText;
+          if (att && att.minPct > 0) {
+            // Same attendance percentage as the Checklist / Attendance Progress
+            pct = Math.min(100, att.attendancePct);
+            var met = att.attendancePct >= att.minPct;
+            progLabel = met ? "Goal met!" : att.attendancePct + "% attendance";
+            subText = "Goal: " + att.minPct + "% attendance";
+            if (met) pct = 100;
+          } else {
+            pct = s.minMins > 0 ? Math.min(100, Math.round((s.actualMins / s.minMins) * 100)) : 100;
+            progLabel = pct >= 100 ? "Goal met!" : pct + "% of goal";
+            subText = "Goal: " + fmtMins(s.minMins);
+          }
           var fillClass = pct >= 100 ? "fill-green" : pct >= 60 ? "fill-yellow" : "fill-red";
           var progClass = pct >= 100 ? "prog-green" : pct >= 60 ? "prog-yellow" : "prog-red";
-          var progLabel = pct >= 100 ? "Goal met!" : pct + "% of goal";
           hoursHtml += "<div class=\"hours-card\">" +
             "<div class=\"hours-label\">" + esc(s.name) + "</div>" +
             "<div class=\"hours-value\">" + fmtMins(s.actualMins) + "</div>" +
-            "<div class=\"hours-sub\">Goal: " + fmtMins(s.minMins) + "</div>" +
+            "<div class=\"hours-sub\">" + subText + "</div>" +
             "<div class=\"progress-bar-bg\"><div class=\"progress-bar-fill " + fillClass + "\" style=\"width:" + pct + "%\"></div></div>" +
             "<div class=\"progress-label " + progClass + "\">" + progLabel + "</div>" +
+            "<div class=\"hours-sub\" style=\"margin-top:6px;font-weight:700\">" + hoursLine(s) + "</div>" +
             "</div>";
         });
         document.getElementById("hours-row").innerHTML = hoursHtml;
@@ -298,12 +387,15 @@
         var attHtml = "";
         data.attendance.forEach(function(a) {
           var pct = a.attendancePct;
+          var hrsSeason = null;
+          (data.seasons || []).forEach(function(x) { if (x.name === a.seasonName) hrsSeason = x; });
+          var hrsText = hrsSeason ? hoursLine(hrsSeason) : "";
           var fillClass = pct >= a.minPct ? "fill-green" : pct >= (a.minPct * 0.75) ? "fill-yellow" : "fill-red";
           var progClass = pct >= a.minPct ? "prog-green" : pct >= (a.minPct * 0.75) ? "prog-yellow" : "prog-red";
           attHtml += "<div class=\"attend-row\">" +
             "<div class=\"attend-name\">" + esc(a.seasonName) + "</div>" +
             "<div class=\"attend-bar-wrap\"><div class=\"progress-bar-bg\"><div class=\"progress-bar-fill " + fillClass + "\" style=\"width:" + Math.min(100, pct) + "%\"></div></div></div>" +
-            "<div><div class=\"attend-pct " + progClass + "\">" + pct + "%</div><span class=\"attend-min\">min " + a.minPct + "%</span></div>" +
+            "<div><div class=\"attend-pct " + progClass + "\">" + pct + "%</div><span class=\"attend-min\">min " + a.minPct + "%</span>" + (hrsText ? "<div class=\"attend-min\">" + hrsText + "</div>" : "") + "</div>" +
             "</div>";
         });
         document.getElementById("attend-card").innerHTML = attHtml;
@@ -392,6 +484,9 @@
 
     function logout() {
       sessionStorage.removeItem("portal_pin");
+      volPin = "";
+      volData = null;
+      document.getElementById("vol-overlay").classList.remove("show");
       document.getElementById("pin-input").value = "";
       document.getElementById("login-error").classList.remove("show");
       document.getElementById("login-wrap").style.display = "flex";
@@ -402,6 +497,12 @@
       if (!mins || mins === 0) return "0 min";
       var h = Math.floor(mins / 60); var m = mins % 60;
       if (h === 0) return m + " min"; if (m === 0) return h + "h"; return h + "h " + m + "m";
+    }
+
+    function hoursLine(s) {
+      if (!s) return "";
+      if (s.minMins > 0) return fmtMins(s.actualMins) + " of " + fmtMins(s.minMins) + " needed";
+      return fmtMins(s.actualMins) + " logged (no minimum)";
     }
 
     function formatDisplayValue(dv, threshold, itemName) {
@@ -429,9 +530,303 @@
       return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
+
+    /* ---------------- VOLUNTEER SIGN-UPS ---------------- */
+    var volPin = "";
+    var volData = null;
+    var volView = { type: "list", eventId: "" };
+    var volForm = null;   /* { eventId, slotId } while the sign-up form is open */
+
+    document.getElementById("vol-open-btn").addEventListener("click", function() {
+      document.getElementById("vol-overlay").classList.add("show");
+      window.scrollTo(0, 0);
+      volView = { type: "list", eventId: "" };
+      volForm = null;
+      volLoad();
+    });
+    document.getElementById("vol-close-btn").addEventListener("click", function() {
+      document.getElementById("vol-overlay").classList.remove("show");
+    });
+    document.getElementById("vol-body").addEventListener("click", volClick);
+
+    function volLoad(keepMessage) {
+      var body = document.getElementById("vol-body");
+      if (!volData) body.innerHTML = "<div class=\"vol-card\"><span class=\"spinner\" style=\"border-color:rgba(255,255,255,0.3);border-top-color:#b8860b\"></span>Loading opportunities...</div>";
+      post({ action: "getVolunteerEvents", pin: volPin })
+        .then(function(d) {
+          if (!d.success) { body.innerHTML = "<div class=\"vol-card\">" + esc(d.message || "Could not load opportunities.") + "</div>"; return; }
+          volData = d;
+          volRender();
+        })
+        .catch(function(err) {
+          body.innerHTML = "<div class=\"vol-card\">Connection error: " + esc(err.message) + "</div>";
+        });
+    }
+
+    /* Small "N opportunities open" chip on the promo card. Fails silently. */
+    function volPreviewCount() {
+      var chip = document.getElementById("vol-count");
+      chip.style.display = "none";
+      post({ action: "getVolunteerEvents", pin: volPin }).then(function(d) {
+        if (!d || !d.success) return;
+        volData = d;
+        var n = (d.events || []).filter(function(ev) { return ev.signupsOpen; }).length;
+        if (n > 0) { chip.textContent = n + (n === 1 ? " opportunity" : " opportunities") + " open now"; chip.style.display = "inline-block"; }
+      }).catch(function() {});
+    }
+
+    function volFindEvent(id) {
+      var evs = (volData && volData.events) || [];
+      for (var i = 0; i < evs.length; i++) { if (evs[i].eventId === id) return evs[i]; }
+      return null;
+    }
+
+    function volFindSlot(ev, slotId) {
+      for (var i = 0; i < ev.slots.length; i++) { if (ev.slots[i].slotId === slotId) return ev.slots[i]; }
+      return null;
+    }
+
+    function volTimeText(s) {
+      if (s.start && s.end) return s.start + " - " + s.end;
+      if (s.start) return "Starts " + s.start;
+      return "";
+    }
+
+    /* "Click to sign up" button on each card. One open slot goes straight to the form; otherwise it opens the event. */
+    function volCardButton(ev) {
+      if (!ev.signupsOpen) return "<div><button class=\"vol-small-btn\" disabled>Sign-ups closed</button></div>";
+      var openSlots = ev.slots.filter(function(s) { return s.spots === 0 || s.taken < s.spots; });
+      if (openSlots.length === 0) return "<div><button class=\"vol-small-btn\" disabled>Full</button></div>";
+      if (ev.slots.length === 1) {
+        return "<div><button class=\"vol-small-btn\" data-act=\"quicksignup\" data-ev=\"" + esc(ev.eventId) + "\" data-id=\"" + esc(openSlots[0].slotId) + "\">Click to sign up</button></div>";
+      }
+      return "<div><button class=\"vol-small-btn\" data-act=\"open\" data-id=\"" + esc(ev.eventId) + "\">Click to sign up</button></div>";
+    }
+
+    function volOpenForm(evId, slotId) {
+      volView = { type: "event", eventId: evId };
+      volForm = { eventId: evId, slotId: slotId };
+      volRender();
+      var f = document.getElementById("vol-form");
+      if (f) f.scrollIntoView({ behavior: "smooth", block: "start" });
+      var pc = document.getElementById("vf-parent-on");
+      if (pc) pc.addEventListener("change", function() {
+        document.getElementById("vf-parent-fields").style.display = pc.checked ? "block" : "none";
+      });
+    }
+
+    /* Times shown on the opportunities list. One line if all slots share a time, otherwise one line per slot. */
+    function volEventTimes(ev) {
+      var timed = ev.slots.filter(function(s) { return volTimeText(s) !== ""; });
+      if (timed.length === 0) return "";
+      var first = volTimeText(timed[0]);
+      var same = timed.every(function(s) { return volTimeText(s) === first; });
+      if (same && timed.length === ev.slots.length) {
+        return "<div class=\"vol-times\">Time: " + esc(first) + "</div>";
+      }
+      var lines = timed.map(function(s) { return esc(s.name) + ": " + esc(volTimeText(s)); });
+      return "<div class=\"vol-times\">" + lines.join("<br>") + "</div>";
+    }
+
+    function volRender() {
+      if (!volData) return;
+      var html = "";
+      if (volView.type === "event") {
+        var ev = volFindEvent(volView.eventId);
+        if (ev) { html = volRenderEvent(ev); } else { volView = { type: "list", eventId: "" }; html = volRenderList(); }
+      } else {
+        html = volRenderList();
+      }
+      document.getElementById("vol-body").innerHTML = html;
+    }
+
+    function volRenderList() {
+      var html = "";
+      var mine = volData.mySignups || [];
+      if (mine.length > 0) {
+        html += "<div class=\"vol-card\"><div class=\"vol-ev-name\">My Family Sign-ups</div>";
+        mine.forEach(function(m) {
+          html += "<div class=\"vol-mine-row\"><div>" + esc(m.personName) + " (" + esc(m.type) + ")<br><span style=\"color:rgba(255,255,255,0.65);font-weight:500\">" +
+            esc(m.eventName) + " - " + esc(m.slotName) + (m.date ? " - " + esc(m.date) : "") + (volTimeText(m) ? " - " + esc(volTimeText(m)) : "") + "</span></div>" +
+            "<button class=\"vol-small-btn red\" data-act=\"cancel\" data-id=\"" + esc(m.signupId) + "\">Cancel</button></div>";
+        });
+        html += "<div id=\"vol-list-msg\" class=\"vol-msg\"></div></div>";
+      }
+      var evs = volData.events || [];
+      if (evs.length === 0) {
+        html += "<div class=\"vol-card\">No volunteer opportunities are open right now. Check back soon!</div>";
+      }
+      evs.forEach(function(ev) {
+        var open = 0; var total = 0; var unlimited = false;
+        ev.slots.forEach(function(s) {
+          if (s.spots === 0) { unlimited = true; } else { total += s.spots; open += Math.max(0, s.spots - s.taken); }
+        });
+        html += "<div class=\"vol-card clickable\" data-act=\"open\" data-id=\"" + esc(ev.eventId) + "\">" +
+          "<div class=\"vol-ev-name\">" + esc(ev.name) + "</div>" +
+          "<div class=\"vol-ev-meta\">" + (ev.date ? esc(ev.date) : "Date to be announced") + (ev.location ? " - " + esc(ev.location) : "") + "</div>" +
+          volEventTimes(ev) +
+          (ev.audience ? "<span class=\"vol-chip\">For: " + esc(ev.audience) + "</span>" : "") +
+          (ev.signupsOpen ? ("<span class=\"vol-chip ok\">" + (unlimited ? "Open" : open + " spots open") + "</span>") : "<span class=\"vol-chip warn\">Sign-ups closed</span>") +
+          "<span class=\"vol-chip\">" + ev.slots.length + " slot" + (ev.slots.length === 1 ? "" : "s") + "</span>" +
+          volCardButton(ev) +
+          "</div>";
+      });
+      html += "<div class=\"vol-note\">Volunteer sign-ups are separate from your logged hours. Sign in on the kiosk with the Outreach session type when you volunteer so your hours count.</div>";
+      return html;
+    }
+
+    function volRenderEvent(ev) {
+      var html = "<button class=\"vol-back\" data-act=\"list\" style=\"margin-bottom:12px\">&#8592; Back to Volunteer Opportunities</button>";
+      html += "<div class=\"vol-card\"><div class=\"vol-ev-name\">" + esc(ev.name) + "</div>" +
+        "<div class=\"vol-ev-meta\">" + (ev.date ? esc(ev.date) : "Date to be announced") + (ev.location ? "<br>Where: " + esc(ev.location) : "") +
+        (ev.audience ? "<br>Who: " + esc(ev.audience) : "") + (ev.notes ? "<br>Notes: " + esc(ev.notes) : "") +
+        (ev.contact ? "<br>Questions: " + esc(ev.contact) : "") + (ev.deadline ? "<br>Sign up by: " + esc(ev.deadline) : "") + "</div>" +
+        (ev.maxPerPerson > 0 ? "<span class=\"vol-chip\">Limit " + ev.maxPerPerson + " slot" + (ev.maxPerPerson === 1 ? "" : "s") + " per person</span>" : "") +
+        (!ev.signupsOpen ? "<span class=\"vol-chip warn\">Sign-ups closed</span>" : "") + "</div>";
+
+      if (volForm && volForm.eventId === ev.eventId) {
+        var fs = volFindSlot(ev, volForm.slotId);
+        if (fs) html += volRenderForm(ev, fs);
+      }
+
+      html += "<div class=\"vol-slots\">";
+      ev.slots.forEach(function(s) {
+        var left = s.spots === 0 ? 999 : Math.max(0, s.spots - s.taken);
+        var full = left === 0;
+        var mineHere = s.mine && s.mine.length > 0;
+        html += "<div class=\"vol-slot" + (full ? " full" : "") + "\">" +
+          "<div class=\"vol-slot-name\">" + esc(s.name) + "</div>" +
+          (volTimeText(s) ? "<div class=\"vol-slot-time\">" + esc(volTimeText(s)) + "</div>" : "") +
+          "<div class=\"vol-slot-spots\">" + (s.spots === 0 ? s.taken + " signed up" : s.taken + " of " + s.spots + " filled" + (full ? " - FULL" : "")) + "</div>" +
+          (s.names && s.names.length ? "<div class=\"vol-slot-names\">" + s.names.map(esc).join(", ") + "</div>" : "") +
+          (mineHere ? "<span class=\"vol-chip ok\">Your family: " + s.mine.length + "</span>" : "") +
+          "<div><button class=\"vol-small-btn\" data-act=\"signup\" data-ev=\"" + esc(ev.eventId) + "\" data-id=\"" + esc(s.slotId) + "\"" + ((full || !ev.signupsOpen) ? " disabled" : "") + ">" + (full ? "Full" : "Sign up") + "</button></div>" +
+          (s.mine || []).map(function(m) {
+            return "<div><button class=\"vol-small-btn red\" data-act=\"cancel\" data-id=\"" + esc(m.signupId) + "\">Remove " + esc(m.personName) + "</button></div>";
+          }).join("") +
+          "</div>";
+      });
+      html += "</div><div id=\"vol-ev-msg\" class=\"vol-msg\"></div>" +
+        "<button class=\"vol-back\" data-act=\"list\" style=\"margin-top:16px\">&#8592; Back to Volunteer Opportunities</button>";
+      return html;
+    }
+
+    function volRenderForm(ev, slot) {
+      var who = (volData && volData.studentName) ? volData.studentName : "me";
+      return "<div class=\"vol-form-box\" id=\"vol-form\">" +
+        "<div class=\"vol-ev-name\">Sign up: " + esc(slot.name) + "</div>" +
+        "<div class=\"vol-ev-meta\">" + esc(ev.name) + (volTimeText(slot) ? " - " + esc(volTimeText(slot)) : "") + "</div>" +
+        "<div class=\"vol-check\"><input type=\"checkbox\" id=\"vf-student\" checked><label for=\"vf-student\" style=\"margin:0\">Sign up " + esc(who) + "</label></div>" +
+        "<label for=\"vf-semail\">Student email (optional)</label><input type=\"email\" id=\"vf-semail\" maxlength=\"120\" placeholder=\"name@example.com\">" +
+        "<div class=\"vol-check\" style=\"margin-top:14px\"><input type=\"checkbox\" id=\"vf-parent-on\"><label for=\"vf-parent-on\" style=\"margin:0\">Also sign up a parent or guardian</label></div>" +
+        "<div id=\"vf-parent-fields\" style=\"display:none\">" +
+        "<label for=\"vf-pname\">Parent / guardian name</label><input type=\"text\" id=\"vf-pname\" maxlength=\"80\">" +
+        "<label for=\"vf-pemail\">Parent / guardian email</label><input type=\"email\" id=\"vf-pemail\" maxlength=\"120\" placeholder=\"parent@example.com\">" +
+        "</div>" +
+        "<label for=\"vf-note\">Note (optional)</label><input type=\"text\" id=\"vf-note\" maxlength=\"200\" placeholder=\"Anything we should know?\">" +
+        "<div style=\"display:flex;gap:10px;margin-top:14px;flex-wrap:wrap\">" +
+        "<button class=\"vol-small-btn\" id=\"vf-confirm\" data-act=\"confirm\" style=\"margin-top:0\">Confirm sign-up</button>" +
+        "<button class=\"vol-back\" data-act=\"cancelform\">Cancel</button></div>" +
+        "<div id=\"vf-msg\" class=\"vol-msg\"></div></div>";
+    }
+
+    function volCalUrl(ev, slot) {
+      if (!ev.dateKey || slot.startMin < 0) return "";
+      function stamp(min) {
+        var h = Math.floor(min / 60); var m = min % 60;
+        return ev.dateKey + "T" + ("0" + h).slice(-2) + ("0" + m).slice(-2) + "00";
+      }
+      var endMin = slot.endMin > slot.startMin ? slot.endMin : Math.min(slot.startMin + 60, 1439);
+      var url = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+        "&text=" + encodeURIComponent("Volunteer: " + ev.name + " - " + slot.name) +
+        "&dates=" + stamp(slot.startMin) + "/" + stamp(endMin) +
+        "&location=" + encodeURIComponent(ev.location || "") +
+        "&details=" + encodeURIComponent(ev.notes || "");
+      if (ev.calendar && ev.calendar.tz) url += "&ctz=" + encodeURIComponent(ev.calendar.tz);
+      return url;
+    }
+
+    function volSetMsg(id, text, good) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = "vol-msg " + (good ? "good" : "err");
+    }
+
+    function volClick(e) {
+      var t = e.target;
+      while (t && t !== this && !t.getAttribute("data-act")) { t = t.parentNode; }
+      if (!t || t === this) return;
+      var act = t.getAttribute("data-act");
+
+      if (act === "open") {
+        volView = { type: "event", eventId: t.getAttribute("data-id") }; volForm = null; volRender(); window.scrollTo(0, 0);
+      } else if (act === "list") {
+        volView = { type: "list", eventId: "" }; volForm = null; volRender();
+      } else if (act === "signup") {
+        volOpenForm(t.getAttribute("data-ev"), t.getAttribute("data-id"));
+      } else if (act === "quicksignup") {
+        volOpenForm(t.getAttribute("data-ev"), t.getAttribute("data-id"));
+      } else if (act === "cancelform") {
+        volForm = null; volRender();
+      } else if (act === "confirm") {
+        volSubmit(t);
+      } else if (act === "cancel") {
+        volCancel(t);
+      }
+    }
+
+    function volSubmit(btn) {
+      if (!volForm) return;
+      var signStudent = document.getElementById("vf-student").checked;
+      var parentOn = document.getElementById("vf-parent-on").checked;
+      var pname = parentOn ? document.getElementById("vf-pname").value.trim() : "";
+      var pemail = parentOn ? document.getElementById("vf-pemail").value.trim() : "";
+      if (!signStudent && !parentOn) { volSetMsg("vf-msg", "Choose yourself, a parent, or both.", false); return; }
+      if (parentOn && (!pname || !pemail)) { volSetMsg("vf-msg", "Please enter the parent name and email.", false); return; }
+      btn.disabled = true; btn.textContent = "Saving...";
+      var ev = volFindEvent(volForm.eventId);
+      var slot = ev ? volFindSlot(ev, volForm.slotId) : null;
+      post({
+        action: "volunteerSignUp", pin: volPin, slotId: volForm.slotId,
+        signStudent: signStudent ? "yes" : "no", parentName: pname, parentEmail: pemail,
+        studentEmail: document.getElementById("vf-semail").value.trim(),
+        note: document.getElementById("vf-note").value.trim()
+      }).then(function(d) {
+        if (!d.success) { btn.disabled = false; btn.textContent = "Confirm sign-up"; volSetMsg("vf-msg", d.message || "Could not sign up.", false); return; }
+        var calUrl = (ev && slot) ? volCalUrl(ev, slot) : "";
+        volForm = null;
+        post({ action: "getVolunteerEvents", pin: volPin }).then(function(fresh) {
+          if (fresh.success) volData = fresh;
+          volRender();
+          var box = document.createElement("div");
+          box.className = "vol-form-box";
+          box.innerHTML = "<div class=\"vol-msg good\" style=\"display:block;margin:0\">" + esc(d.message) + "</div>" +
+            (calUrl ? "<div style=\"margin-top:10px\"><a class=\"vol-link\" target=\"_blank\" rel=\"noopener\" href=\"" + esc(calUrl) + "\">Add to Google Calendar</a></div>" : "");
+          var body = document.getElementById("vol-body");
+          body.insertBefore(box, body.children[1] || null);
+          window.scrollTo(0, 0);
+        });
+      }).catch(function(err) {
+        btn.disabled = false; btn.textContent = "Confirm sign-up";
+        volSetMsg("vf-msg", "Connection error: " + err.message, false);
+      });
+    }
+
+    function volCancel(btn) {
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = "...";
+      post({ action: "volunteerCancel", pin: volPin, signupId: btn.getAttribute("data-id") })
+        .then(function(d) {
+          if (!d.success) { btn.disabled = false; btn.textContent = label; volSetMsg(document.getElementById("vol-list-msg") ? "vol-list-msg" : "vol-ev-msg", d.message || "Could not cancel.", false); return; }
+          volLoad();
+        })
+        .catch(function(err) { btn.disabled = false; btn.textContent = label; volSetMsg(document.getElementById("vol-list-msg") ? "vol-list-msg" : "vol-ev-msg", "Connection error: " + err.message, false); });
+    }
+
     // Arriving from the kiosk's portal-login handoff: skip re-typing the PIN.
     var handoffPin = sessionStorage.getItem("portal_pin");
     if (handoffPin) loadPortal(handoffPin);
   </script>
 </body>
-</html>
+</html>

@@ -1,55 +1,81 @@
-# argotrack (beartime, Argonauts kiosk)
+# argotrack (Argonauts attendance)
 
-Attendance kiosk for FRC team 8728 Argonauts. It combines the beartime
-Google-Sheets backend with a PIN-keypad kiosk frontend, plus session typing
-(Meeting / Outreach / Competition) and a live "who's signed in" panel.
+Attendance kiosk, student portal, coach dashboard and volunteer sign-ups for
+FRC team 8728 Argonauts, at **argotrack.filipkin.com**.
 
-Deployed separately from the original beartime app: **argotrack.filipkin.com**
-(Coolify), off the `argotrack` branch. The `main` branch and
-`beartime.app.filipkin.com` are untouched.
+It is the server version of the coach's Google Apps Script app and runs on the
+**same spreadsheet, with the same layout**. Both can be used at the same time:
+who is signed in is always read from the last `Log` row for each PIN.
 
-## Deploy (CI)
+## Deploy
 
-Push to `argotrack` → GitHub Actions runs on the self-hosted **NAS runner**
-(`.github/workflows/deploy.yml`): builds the `Dockerfile`, pushes
-`git.filipkin.com/filip/argotrack` to the Forgejo registry, and triggers the
-Coolify docker-image app to pull. ~30s end-to-end; the cloud box only pulls.
-The Dockerfile installs `wget` (Coolify's image health check uses it) and the
-app normalizes any backslash-escaping depth in `API_KEY` (`/\\+n/g`).
+Push to `main`. Coolify builds the `Dockerfile` and deploys. `GET /version`
+reports the running commit.
+
+## Spreadsheet
+
+The spreadsheet is the only data store. Its layout belongs to the coach. The
+app finds tabs by name and columns by position, and never renames, reorders or
+reformats a tab.
+
+| Tab | Columns | App access |
+|-----|---------|------------|
+| `Roster` | Name, PIN, Role, Student Type, Department, then the coach's own columns ("Drive Team Eligible" is found by its header) | read; rollover sets Student Type |
+| `Log` | Timestamp, Student Name, PIN, Event (IN/OUT), Session Duration (minutes), Session Type, Event Name, IP Address | read; append one row per sign-in or sign-out |
+| `Summary` | formulas over `Log` and `Roster` | never written (rollover clears it, as the coach's script does) |
+| `Seasons` | Season Name, Start Date, End Date, Min Hours New / Veteran / Captain | read |
+| `Helpers` | Season, Total Meetings, Total Available Minutes | read |
+| `Checklist` | row 1 deadline group, row 2 requirement, row 3 detail, row 4 consequence, row 5+ one student per row (A = PIN, B = name, C+ = status) | read; rollover clears statuses |
+| `VolEvents`, `VolSlots` | events and their slots, edited by the coach | read |
+| `VolSignups` | Timestamp, Signup ID, Event ID, Slot ID, Person Name, Type, Student Name, Student PIN, Email, Note, Status | read; append sign-ups; set Status to Cancelled |
+| `Attendance` | PIN, Name, one column per day | **added by this app**, see below |
+
+PINs are stored both as text (`0716`) and as numbers (`716`). `normPin` pads
+both to four digits before comparing. New `Log` rows store the PIN as a number,
+like the existing rows, because the `Summary` and `Checklist` formulas match on it.
+
+### The `Attendance` tab
+
+The one tab the app adds, at the end of the spreadsheet. It is a PIN-by-day
+grid of hours, rebuilt from `Roster` and `Log` each time the mentor stats page
+is opened. A mentor types `E` in an empty cell to mark an excused absence; `E`
+marks are the only thing kept from the tab itself.
+
+### Access the service account needs
+
+1. Editor on the spreadsheet.
+2. The coach's sheet locks whole tabs. The service account must be added to the
+   lock on `Log` (sign-ins), and on `Roster`, `Checklist` and `Summary` for the
+   year rollover. Only the owner of the sheet can do that:
+   Data, Protect sheets and ranges, pick the tab, Change permissions.
 
 ## Endpoints
 
 | Route | Purpose |
 |-------|---------|
-| `GET /punch?pin=&sessionType=&eventName=` | Toggle a user in/out. Records a raw `Sessions` row; on sign-out also adds per-day hours to `Log`. `/login` is a back-compat alias. |
-| `GET /signedin` | `{ success, mentors:[], students:[] }` — kiosk polls this every 30s. |
-| `GET /stats?pin=` | Mentor-only attendance stats (unchanged from beartime). |
-| `GET /health` | Pings the sheet. 200 when healthy, 503 when the connection is wedged (Coolify uses this to auto-restart). |
+| `GET /punch?pin=&sessionType=&eventName=` | Sign a person in or out. `/login` is an alias. The sign-out-all PIN signs everyone out. |
+| `GET /signedin` | Names currently signed in. The kiosk polls it. |
+| `GET /portal?pin=` | Student portal: season hours, attendance, checklist, captain eligibility. |
+| `GET /volunteer/events?pin=` | Upcoming volunteer events, slots and the student's own sign-ups. |
+| `GET /volunteer/signup?pin=&slotId=&signStudent=&parentName=&parentEmail=&studentEmail=&note=` | Sign up the student, a parent, or both. |
+| `GET /volunteer/cancel?pin=&signupId=` | Cancel one of the student's own sign-ups. |
+| `GET /stats?pin=` | Mentor PIN only: attendance by person and month, hours by session type. |
+| `GET /mentor/roster?mentorPin=` | Mentor PIN only: roster with in/out status. |
+| `GET /report`, `/roster`, `/seasons`, `/checklist`, `/signoutall`, `/signout`, `/volunteer/roster`, `/rollover`, `/rollover/status` | Coach password (`?password=`). |
+| `GET /health` | Reads one cell. 200 when the sheet is reachable, 503 when not. |
+| `GET /version` | Running commit and uptime. |
 
-## Spreadsheet layout (3 tabs, order matters — read by index)
+## Environment
 
-0. **Users** — `pin, fname, lname, email, type, gender, login, logout, hours, total, loggedin, sessionType, sessionName`. `type` = `MENTOR` or `STUDENT`. This is the roster you edit.
-1. **Log** — date-pivot: `pin, fname, lname` then one column per day (hours). Feeds `/stats`.
-2. **Sessions** — raw append log: `timestamp, pin, name, type, event(IN/OUT), sessionType, eventName, hours`.
+`CLIENT_EMAIL`, `API_KEY` (service account), `SPREADSHEET_ID`, `COACH_PASSWORD`,
+`SIGNOUT_ALL_PIN` (default 9999), `TIMEZONE` (fallback only; the spreadsheet's
+own timezone is used), `PORT`.
 
-## The "stops working after ~a week" fix
+`API_KEY` is stored as a single line. The app turns any run of backslashes
+before an `n` into a real newline.
 
-The old app was restarted every 24h by a cron to work around it silently dying.
-Root causes were fire-and-forget sheet saves (unhandled rejections) and a
-connection cached once at startup with no recovery. This version:
+## Health
 
-- awaits every save / `saveUpdatedCells`,
-- caches the connection but **clears it on failure** so the next request reconnects,
-- wraps each sheet op in `withReconnect` (one automatic retry),
-- exposes `/health` that actually probes the sheet, and
-- runs a self-watchdog that `process.exit(1)`s after 15 min of being unhealthy
-  so Docker restarts a fresh process — only when actually broken, not on a timer.
-
-No external restart cron is needed anymore.
-
-## Provisioning a new sheet
-
-Service accounts can't create Drive files, so create a blank Google Sheet in a
-human Drive, share it (Editor) with the service account, then run the
-provisioning script (kept outside the repo) with `SPREADSHEET_ID` + a Coolify
-token to create the three tabs.
+`/health` probes the sheet. A watchdog exits the process after 15 minutes
+without a healthy probe, and Docker starts a fresh one. Reads retry once;
+writes never retry, so a sign-in can never be recorded twice.
